@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0b0f">
 <title>Anime · アニメ</title>
+<link rel="preconnect" href="https://shikimori.one" crossorigin>
+<link rel="dns-prefetch" href="https://api.allorigins.win">
 <link rel="manifest" href='data:application/manifest+json,{"name":"Anime PWA","short_name":"Anime","start_url":".","display":"standalone","background_color":"#0b0b0f","theme_color":"#0b0b0f"}'>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -17,6 +19,7 @@
   .chipx{background:rgba(255,255,255,.07);color:#d1d5db}
   .on{background:#0a84ff!important;color:#fff!important}
   .fade-in{animation:fadeIn .25s ease} @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .card{content-visibility:auto;contain-intrinsic-size:0 220px}
 </style>
 </head>
 <body class="antialiased">
@@ -43,6 +46,9 @@
       <span class="text-xs text-gray-500">Загрузка…</span>
     </div>
     <div id="home-grid" class="grid grid-cols-3 gap-3 fade-in"></div>
+    <div id="home-more" class="hidden flex items-center justify-center gap-2 py-6 text-xs text-gray-500">
+      <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-[#0a84ff]"></div>Ещё…
+    </div>
     <div id="home-empty" class="hidden text-center text-gray-500 text-sm py-16">Ничего не нашлось</div>
   </main>
 </div>
@@ -66,6 +72,9 @@
   <main class="px-4 py-4 pb-24">
     <div id="search-hint" class="text-center text-gray-600 text-sm py-16">Введите название — например, «Наруто»</div>
     <div id="search-grid" class="grid grid-cols-3 gap-3 fade-in"></div>
+    <div id="search-more" class="hidden flex items-center justify-center gap-2 py-6 text-xs text-gray-500">
+      <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-[#0a84ff]"></div>Ещё…
+    </div>
     <div id="search-empty" class="hidden text-center text-gray-500 text-sm py-16">Ничего не нашлось</div>
   </main>
 </div>
@@ -93,13 +102,12 @@
           <div>
             <div class="text-3xl mb-2">🎬</div>
             <div class="text-sm text-gray-300">Источник видео не подключён.</div>
-            <div class="mt-1 text-xs text-gray-500">Попробуйте другую озвучку или откройте в Safari.</div>
+            <div class="mt-1 text-xs text-gray-500">Попробуйте другую озвучку.</div>
           </div>
         </div>
       </div>
 
       <div id="p-voices" class="mt-3 flex gap-2 overflow-x-auto no-scrollbar"></div>
-      <a id="p-safari" href="#" target="_blank" rel="noopener" class="hidden mt-3 w-full rounded-xl bg-[#0a84ff] py-3 text-center text-sm font-semibold">Открыть в Safari</a>
       <div id="p-meta" class="mt-3 text-xs text-gray-500"></div>
       <p id="p-desc" class="mt-2 text-sm leading-relaxed text-gray-300"></p>
     </div>
@@ -124,9 +132,10 @@
 
 <script>
 /* ============ КОНФИГ ============ */
-const OWN_PROXY = ''; // сюда URL своего прокси (api/proxy.js), если задеплоите
+const OWN_PROXY = '';
 const SHIKI = 'https://shikimori.one';
 const KODIK = 'https://kodik-api.com';
+const LIMIT = 30;
 
 const ENC_TOKENS = [
   "==QO0ADM3kTZmRTNiRDNjFDM==QOxkDMzQjZ4ADZ4zNhZTN",
@@ -135,7 +144,7 @@ const ENC_TOKENS = [
   "==QZiZDNxITZlFDZwIjZ3EjM==AN0UmZlVzN4UWO3EDZ3QDN"
 ];
 
-/* ============ ТОКЕНЫ ============ */
+/* ============ ТОКЕНЫ (кеш = без лишнего запроса) ============ */
 function decryptToken(t){
   try{
     const h = Math.floor(t.length/2);
@@ -148,11 +157,12 @@ const TOKENS = ENC_TOKENS.map(decryptToken).filter(Boolean);
 let KODIK_TOKEN = '';
 let tokenPromise = null;
 function ensureToken(){
+  if (KODIK_TOKEN) return Promise.resolve(true);
   if (tokenPromise) return tokenPromise;
+  let cached = null; try{ cached = localStorage.getItem('kodik_token'); }catch(e){}
+  if (cached){ KODIK_TOKEN = cached; return Promise.resolve(true); } // мгновенно, без проверки
   return tokenPromise = (async () => {
-    let cached = null; try{ cached = localStorage.getItem('kodik_token'); }catch(e){}
-    const list = cached ? [cached, ...TOKENS.filter(t=>t!==cached)] : TOKENS;
-    for (const t of list){
+    for (const t of TOKENS){
       KODIK_TOKEN = t;
       const r = await kodik('search', { shikimori_id:'20', limit:'1' });
       if (r && Array.isArray(r.results) && r.results.length){
@@ -160,19 +170,19 @@ function ensureToken(){
         return true;
       }
     }
-    KODIK_TOKEN = list[0] || '';
+    KODIK_TOKEN = TOKENS[0] || '';
     return false;
   })();
 }
 
-/* ============ FETCH + ПРОКСИ (обход CORS) ============ */
+/* ============ FETCH + ПРОКСИ ============ */
 const PROXIES = [
   u => u,
   u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
   u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
   u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)
 ];
-async function fetchJSON(url, timeout = 9000){
+async function fetchJSON(url, timeout = 6000){
   const chain = OWN_PROXY ? [u => OWN_PROXY + encodeURIComponent(u), ...PROXIES] : PROXIES;
   let err;
   for (const wrap of chain){
@@ -199,7 +209,7 @@ async function kodik(path, params = {}){
 const normShiki = a => {
   const img = a.image || a.poster;
   return { sid: a.id, title: a.russian || a.name,
-    poster: img ? SHIKI + (img.original || img.preview) : null,
+    poster: img ? SHIKI + (img.preview || img.original) : null, // preview = лёгкие картинки
     score: a.score, kind: a.kind, year: (a.aired_on || '').slice(0,4),
     desc: a.description || '', genres: (a.genres||[]).map(g=>g.russian) };
 };
@@ -213,68 +223,167 @@ const normKodik = r => {
     voice: (r.translation && r.translation.title) || null, quality: r.quality || null,
     kodikLink: r.link };
 };
-function dedupe(arr){ const s = new Set(); return arr.filter(i => { const k = i.sid || i.title; if (s.has(k)) return false; s.add(k); return true; }); }
 
-/* ============ СЕКЦИИ ГЛАВНОЙ ============ */
+/* ============ СЕКЦИИ ============ */
 const SECTIONS = {
-  popular: { shiki:{limit:24, order:'popularity', kind:'tv'},
-             kodik:{limit:'24', types:'anime,anime-serial', with_material_data:'true', sort:'shikimori_rating', order:'desc'} },
-  ongoing: { shiki:{limit:24, order:'popularity', status:'ongoing', kind:'tv'},
-             kodik:{limit:'24', types:'anime,anime-serial', with_material_data:'true', anime_status:'ongoing'} },
+  popular: { shiki:{order:'popularity', kind:'tv'},
+             kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true', sort:'shikimori_rating', order:'desc'} },
+  ongoing: { shiki:{order:'popularity', status:'ongoing', kind:'tv'},
+             kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true', anime_status:'ongoing'} },
   fresh:   { shiki:null,
-             kodik:{limit:'24', types:'anime,anime-serial', with_material_data:'true', sort:'updated_at', order:'desc'} },
-  top:     { shiki:{limit:24, order:'score', kind:'tv'},
-             kodik:{limit:'24', types:'anime,anime-serial', with_material_data:'true', sort:'shikimori_rating', order:'desc'} },
-  random:  { shiki:{limit:24, order:'random', kind:'tv'},
-             kodik:{limit:'24', types:'anime,anime-serial', with_material_data:'true'} }
+             kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true', sort:'updated_at', order:'desc'} },
+  top:     { shiki:{order:'score', kind:'tv'},
+             kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true', sort:'shikimori_rating', order:'desc'} },
+  random:  { shiki:{order:'random', kind:'tv'},
+             kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true'} }
 };
-async function loadSection(sec){
-  homeLoading(true);
-  let items = [];
-  const cfg = SECTIONS[sec] || SECTIONS.popular;
-  if (cfg.shiki){
-    const s = await shiki('animes', cfg.shiki);
-    if (Array.isArray(s) && s.length) items = s.map(normShiki);
-  }
-  if (!items.length){
-    await ensureToken();
-    const k = await kodik('list', cfg.kodik);
-    if (k && k.results && k.results.length) items = dedupe(k.results.map(normKodik));
-  }
-  homeLoading(false);
-  renderGrid($('home-grid'), items);
-  $('home-empty').classList.toggle('hidden', items.length > 0);
-}
 
-/* ============ ПОИСК (отдельный экран) ============ */
-let searchTimer, searchToken = 0;
-async function doSearch(q){
-  const my = ++searchToken;
-  $('search-hint').classList.add('hidden');
-  $('search-empty').classList.add('hidden');
-  $('search-grid').innerHTML = '';
-  searchStatus('Ищем «' + q + '»…');
-
-  let items = [];
-  const s = await shiki('animes', { search:q, limit:24 });
-  if (my !== searchToken) return;
-  if (Array.isArray(s) && s.length) items = s.map(normShiki);
-
-  if (!items.length){
-    await ensureToken();
-    const k = await kodik('search', { title:q, limit:24, types:'anime,anime-serial', with_material_data:'true' });
-    if (my !== searchToken) return;
-    if (k && k.results && k.results.length) items = dedupe(k.results.map(normKodik));
-  }
-  if (my !== searchToken) return;
-
-  searchStatus(null);
-  renderGrid($('search-grid'), items);
-  $('search-empty').classList.toggle('hidden', items.length > 0);
-}
-
-/* ============ UI-ХЕЛПЕРЫ ============ */
+/* ============ ЛЕНТА (бесконечная) ============ */
 const $ = id => document.getElementById(id);
+const home = { sec:'popular' };
+let homeState = null, homeReq = 0;
+const homeCache = {}; // кеш секций в памяти — мгновенное переключение
+
+async function loadHome(sec){
+  const my = ++homeReq;
+  home.sec = sec;
+  const cached = homeCache[sec];
+  if (cached && cached.items.length){ // мгновенно из кеша
+    homeState = cached;
+    homeLoading(false);
+    $('home-grid').innerHTML = '';
+    appendCards($('home-grid'), cached.items);
+    cached.rendered = cached.items.length;
+    $('home-empty').classList.add('hidden');
+    return;
+  }
+  homeState = { items:[], keys:new Set(), page:1, nextUrl:null, done:false, source:null, rendered:0, loading:false };
+  homeLoading(true);
+  await fetchHomeChunk();
+  if (my !== homeReq) return;
+  homeLoading(false);
+  appendCards($('home-grid'), homeState.items);
+  homeState.rendered = homeState.items.length;
+  $('home-empty').classList.toggle('hidden', homeState.items.length > 0);
+  if (homeState.items.length) homeCache[sec] = homeState;
+}
+
+async function fetchHomeChunk(){
+  const f = homeState, cfg = SECTIONS[home.sec];
+  if (!f || f.loading) return;
+  f.loading = true;
+  if (f.rendered > 0) $('home-more').classList.remove('hidden');
+  let got = [];
+  if (f.source === 'shiki'){
+    const s = await shiki('animes', Object.assign({}, cfg.shiki, { limit:LIMIT, page:f.page }));
+    if (Array.isArray(s) && s.length){ got = s.map(normShiki); f.page++; if (s.length < LIMIT) f.done = true; }
+    else f.done = true;
+  } else if (f.source === 'kodik'){
+    if (f.nextUrl){
+      let k = null; try{ k = await fetchJSON(f.nextUrl); }catch(e){}
+      if (k && k.results && k.results.length){ got = k.results.map(normKodik); f.nextUrl = k.next_page || null; if (!f.nextUrl) f.done = true; }
+      else f.done = true;
+    } else f.done = true;
+  } else {
+    if (cfg.shiki){
+      const s = await shiki('animes', Object.assign({}, cfg.shiki, { limit:LIMIT, page:1 }));
+      if (Array.isArray(s) && s.length){ got = s.map(normShiki); f.source = 'shiki'; f.page = 2; if (s.length < LIMIT) f.done = true; }
+    }
+    if (!got.length){
+      await ensureToken();
+      const k = await kodik('list', cfg.kodik);
+      if (k && k.results && k.results.length){ got = k.results.map(normKodik); f.source = 'kodik'; f.nextUrl = k.next_page || null; if (!f.nextUrl) f.done = true; }
+      else f.done = true;
+    }
+  }
+  const before = f.items.length;
+  got.forEach(it => { const k = it.sid || it.title; if (!f.keys.has(k)){ f.keys.add(k); f.items.push(it); } });
+  if (f.rendered > 0 && f.items.length === before) f.done = true; // не зацикливаться впустую
+  f.loading = false;
+  $('home-more').classList.add('hidden');
+}
+
+async function loadHomeMore(){
+  const f = homeState;
+  if (!f || f.loading || f.done) return;
+  const my = homeReq;
+  await fetchHomeChunk();
+  if (my !== homeReq) return;
+  appendCards($('home-grid'), f.items.slice(f.rendered));
+  f.rendered = f.items.length;
+}
+
+/* ============ ПОИСК (свой экран + бесконечный) ============ */
+let searchState = null, searchReq = 0, searchCache = null, searchTimer;
+
+async function doSearch(q, append = false){
+  const my = ++searchReq;
+  if (!append){
+    if (searchCache && searchCache.q === q && searchCache.items.length){
+      searchState = searchCache;
+      $('search-grid').innerHTML = '';
+      appendCards($('search-grid'), searchCache.items);
+      searchCache.rendered = searchCache.items.length;
+      $('search-hint').classList.add('hidden');
+      $('search-empty').classList.add('hidden');
+      searchStatus(null);
+      return;
+    }
+    searchState = { q, items:[], keys:new Set(), page:1, done:false, source:null, rendered:0, loading:false };
+    $('search-hint').classList.add('hidden');
+    $('search-empty').classList.add('hidden');
+    $('search-grid').innerHTML = '';
+    searchStatus('Ищем «' + q + '»…');
+  }
+  await fetchSearchChunk(q);
+  if (my !== searchReq) return;
+  searchStatus(null);
+  appendCards($('search-grid'), searchState.items.slice(searchState.rendered));
+  searchState.rendered = searchState.items.length;
+  $('search-empty').classList.toggle('hidden', searchState.items.length > 0);
+  if (searchState.items.length) searchCache = searchState;
+}
+
+async function fetchSearchChunk(q){
+  const f = searchState;
+  if (!f || f.loading) return;
+  f.loading = true;
+  if (f.rendered > 0) $('search-more').classList.remove('hidden');
+  let got = [];
+  if (f.source === 'shiki'){
+    const s = await shiki('animes', { search:q, limit:LIMIT, page:f.page });
+    if (Array.isArray(s) && s.length){ got = s.map(normShiki); f.page++; if (s.length < LIMIT) f.done = true; }
+    else f.done = true;
+  } else {
+    const s = await shiki('animes', { search:q, limit:LIMIT, page:1 });
+    if (Array.isArray(s) && s.length){ got = s.map(normShiki); f.source = 'shiki'; f.page = 2; if (s.length < LIMIT) f.done = true; }
+    if (!got.length){
+      await ensureToken();
+      const k = await kodik('search', { title:q, limit:LIMIT, types:'anime,anime-serial', with_material_data:'true' });
+      if (k && k.results && k.results.length){ got = k.results.map(normKodik); f.source = 'kodik'; f.done = true; }
+      else f.done = true;
+    }
+  }
+  const before = f.items.length;
+  got.forEach(it => { const k = it.sid || it.title; if (!f.keys.has(k)){ f.keys.add(k); f.items.push(it); } });
+  if (f.rendered > 0 && f.items.length === before) f.done = true;
+  f.loading = false;
+  $('search-more').classList.add('hidden');
+}
+
+async function loadSearchMore(){
+  const f = searchState;
+  if (!f || f.loading || f.done) return;
+  const q = $('search-input').value.trim();
+  if (q !== f.q) return;
+  const my = searchReq;
+  await fetchSearchChunk(q);
+  if (my !== searchReq) return;
+  appendCards($('search-grid'), f.items.slice(f.rendered));
+  f.rendered = f.items.length;
+}
+
+/* ============ UI ============ */
 function toast(m){ const el = $('toast'); el.textContent = m; el.classList.remove('hidden');
   clearTimeout(el._t); el._t = setTimeout(() => el.classList.add('hidden'), 2500); }
 function homeLoading(v){ $('home-loader').classList.toggle('hidden', !v);
@@ -284,15 +393,14 @@ function searchStatus(msg){ const el = $('search-status');
   el.classList.remove('hidden'); el.classList.add('flex');
   $('search-status-text').textContent = msg; }
 
-function renderGrid(grid, items){
-  grid.innerHTML = '';
-  items.forEach(it => {
+function appendCards(grid, arr){
+  arr.forEach(it => {
     const b = document.createElement('button');
-    b.className = 'text-left active:scale-95 transition-transform';
+    b.className = 'card text-left active:scale-95 transition-transform';
     b.onclick = () => openPlayer(it);
     b.innerHTML = `
       <div class="relative mb-1.5 aspect-[2/3] overflow-hidden rounded-lg bg-white/5">
-        ${it.poster ? `<img src="${it.poster}" loading="lazy" class="h-full w-full object-cover">` : '<div class="grid h-full w-full place-items-center text-[10px] text-gray-600">нет постера</div>'}
+        ${it.poster ? `<img src="${it.poster}" loading="lazy" decoding="async" class="h-full w-full object-cover">` : '<div class="grid h-full w-full place-items-center text-[10px] text-gray-600">нет постера</div>'}
         ${it.score ? `<span class="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold">★ ${it.score}</span>` : ''}
       </div>
       <div class="line-clamp-2 text-xs font-medium leading-tight">${it.title}</div>`;
@@ -301,14 +409,14 @@ function renderGrid(grid, items){
 }
 
 function setTab(name){
-  const home = name === 'home';
-  $('screen-home').classList.toggle('hidden', !home);
-  $('screen-search').classList.toggle('hidden', home);
-  $('tab-home').classList.toggle('text-[#0a84ff]', home);
-  $('tab-home').classList.toggle('text-gray-500', !home);
-  $('tab-search').classList.toggle('text-[#0a84ff]', !home);
-  $('tab-search').classList.toggle('text-gray-500', home);
-  if (!home) setTimeout(() => $('search-input').focus(), 60);
+  const h = name === 'home';
+  $('screen-home').classList.toggle('hidden', !h);
+  $('screen-search').classList.toggle('hidden', h);
+  $('tab-home').classList.toggle('text-[#0a84ff]', h);
+  $('tab-home').classList.toggle('text-gray-500', !h);
+  $('tab-search').classList.toggle('text-[#0a84ff]', !h);
+  $('tab-search').classList.toggle('text-gray-500', h);
+  if (!h) setTimeout(() => $('search-input').focus(), 60);
 }
 
 /* ============ ПЛЕЕР ============ */
@@ -320,14 +428,12 @@ async function openPlayer(item){
   $('p-loader').classList.remove('hidden');
   $('p-error').classList.add('hidden');
   $('p-voices').innerHTML = '';
-  $('p-safari').classList.add('hidden');
   $('p-meta').textContent = [item.kind, item.year, item.score ? '★ ' + item.score : ''].filter(Boolean).join(' · ');
   $('p-desc').textContent = item.desc || 'Загрузка…';
 
   if (!item.desc && item.sid){
     const d = await shiki('animes/' + item.sid);
-    if (d && d.description){ item.desc = d.description; $('p-desc').textContent = d.description; }
-    else $('p-desc').textContent = 'Описание отсутствует';
+    $('p-desc').textContent = (d && d.description) ? d.description : 'Описание отсутствует';
   } else $('p-desc').textContent = item.desc || 'Описание отсутствует';
 
   await ensureToken();
@@ -338,7 +444,7 @@ async function openPlayer(item){
   }
   if (!results.length){
     const k = await kodik('search', { title:item.title, limit:'10', types:'anime,anime-serial' });
-    if (k && k.results && k.results.length) results = dedupe(k.results.map(normKodik));
+    if (k && k.results && k.results.length) results = k.results.map(normKodik);
   }
   if (!results.length){
     $('p-loader').classList.add('hidden');
@@ -349,7 +455,7 @@ async function openPlayer(item){
   const v = $('p-voices');
   results.forEach((r, i) => {
     const b = document.createElement('button');
-    b.className = 'voice-chip chipx shrink-0 rounded-full px-3 py-1.5 text-xs' + (i === 0 ? ' on' : '');
+    b.className = 'chipx shrink-0 rounded-full px-3 py-1.5 text-xs' + (i === 0 ? ' on' : '');
     b.textContent = (r.voice || 'Вариант ' + (i+1)) + (r.quality ? ' · ' + r.quality : '');
     b.onclick = () => { v.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on'); setPlayer(r); };
     v.appendChild(b);
@@ -361,7 +467,6 @@ function setPlayer(r){
   if (l.startsWith('//')) l = 'https:' + l;
   $('p-iframe').src = l;
   $('p-iframe').onload = () => $('p-loader').classList.add('hidden');
-  const s = $('p-safari'); s.href = l; s.classList.remove('hidden');
   $('p-meta').textContent = [r.kind, r.year, r.quality, r.voice ? '🎙 ' + r.voice : '', r.score ? '★ ' + r.score : ''].filter(Boolean).join(' · ');
 }
 function closePlayer(){
@@ -375,7 +480,7 @@ document.querySelectorAll('.sec-chip').forEach(ch => ch.onclick = () => {
   document.querySelectorAll('.sec-chip').forEach(c => c.classList.remove('on'));
   ch.classList.add('on');
   if (ch.dataset.sec === 'random') toast('🍥 Случайная подборка');
-  loadSection(ch.dataset.sec);
+  loadHome(ch.dataset.sec);
 });
 $('tab-home').onclick = () => setTab('home');
 $('tab-search').onclick = () => setTab('search');
@@ -385,20 +490,27 @@ $('search-input').addEventListener('input', e => {
   clearTimeout(searchTimer);
   const q = e.target.value.trim();
   if (!q){
-    searchToken++;
+    searchReq++;
     searchStatus(null);
     $('search-grid').innerHTML = '';
     $('search-empty').classList.add('hidden');
     $('search-hint').classList.remove('hidden');
     return;
   }
-  searchTimer = setTimeout(() => doSearch(q), 450);
+  searchTimer = setTimeout(() => doSearch(q), 350);
 });
+
+/* Бесконечная прокрутка: дошли до низа — грузим ещё */
+window.addEventListener('scroll', () => {
+  if (!$('player').classList.contains('hidden')) return;
+  if (window.innerHeight + window.scrollY < document.body.offsetHeight - 800) return;
+  if (!$('screen-home').classList.contains('hidden')) loadHomeMore();
+  else loadSearchMore();
+}, { passive:true });
 
 /* ============ СТАРТ ============ */
 setTab('home');
-ensureToken();            // в фоне подбираем рабочий токен Kodik
-loadSection('popular');   // каталог
+loadHome('popular');
 </script>
 </body>
 </html>
