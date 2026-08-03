@@ -2,170 +2,150 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#000000">
-<title>Anime PWA</title>
-<link rel="manifest" href='data:application/manifest+json,{"name":"Anime PWA","short_name":"Anime","start_url":".","display":"standalone","background_color":"#000000","theme_color":"#000000"}'>
+<meta name="theme-color" content="#0b0b0f">
+<title>Anime · アニメ</title>
+<link rel="manifest" href='data:application/manifest+json,{"name":"Anime PWA","short_name":"Anime","start_url":".","display":"standalone","background_color":"#0b0b0f","theme_color":"#0b0b0f"}'>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body{background:#000;color:#fff;overscroll-behavior-y:contain;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Roboto,sans-serif}
+  body{background:#0b0b0f;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Roboto,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
   .safe-top{padding-top:env(safe-area-inset-top)} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
   .no-scrollbar::-webkit-scrollbar{display:none}
-  .blur-bg{background:rgba(20,20,22,.75);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .blur-bg{background:rgba(15,15,20,.75);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+  .chipx{background:rgba(255,255,255,.07);color:#d1d5db}
+  .on{background:#0a84ff!important;color:#fff!important}
   .fade-in{animation:fadeIn .25s ease} @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-  .chip-on{background:#0a84ff!important;color:#fff!important}
 </style>
 </head>
 <body class="antialiased">
 
-<!-- ШАПКА -->
-<header class="safe-top sticky top-0 z-40 blur-bg border-b border-white/10 px-4 py-3 flex items-center justify-between">
-  <h1 class="text-xl font-bold">Anime</h1>
-  <button id="btn-search" class="p-2 text-[#0a84ff]"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></button>
-</header>
+<!-- ================= ЭКРАН: ГЛАВНАЯ ================= -->
+<div id="screen-home">
+  <header class="safe-top sticky top-0 z-40 blur-bg border-b border-white/10 px-4 pt-3 pb-2">
+    <div class="flex items-baseline gap-2">
+      <h1 class="text-2xl font-extrabold tracking-tight">Anime</h1>
+      <span class="text-xs text-gray-500">アニメ.</span>
+    </div>
+    <div class="flex gap-2 overflow-x-auto no-scrollbar pt-2 pb-1">
+      <button data-sec="popular" class="sec-chip on shrink-0 px-4 py-2 rounded-full chipx text-sm font-medium">Популярное</button>
+      <button data-sec="ongoing" class="sec-chip shrink-0 px-4 py-2 rounded-full chipx text-sm font-medium">Онгоинги</button>
+      <button data-sec="fresh"   class="sec-chip shrink-0 px-4 py-2 rounded-full chipx text-sm font-medium">Свежее</button>
+      <button data-sec="top"     class="sec-chip shrink-0 px-4 py-2 rounded-full chipx text-sm font-medium">Топ рейтинга</button>
+      <button data-sec="random"  class="sec-chip shrink-0 px-4 py-2 rounded-full chipx text-sm">🍥</button>
+    </div>
+  </header>
 
-<!-- ПОИСК -->
-<div id="search-bar" class="hidden sticky top-[57px] z-30 blur-bg px-4 py-2 border-b border-white/10">
-  <input id="search-input" type="search" placeholder="Поиск аниме…" class="w-full bg-[#1c1c1e] text-white px-4 py-3 rounded-xl outline-none ring-2 ring-transparent focus:ring-[#0a84ff]">
+  <main class="px-4 py-4 pb-24">
+    <div id="home-loader" class="flex flex-col items-center gap-2 py-16">
+      <div class="animate-spin rounded-full h-8 w-8 border-2 border-white/15 border-t-[#0a84ff]"></div>
+      <span class="text-xs text-gray-500">Загрузка…</span>
+    </div>
+    <div id="home-grid" class="grid grid-cols-3 gap-3 fade-in"></div>
+    <div id="home-empty" class="hidden text-center text-gray-500 text-sm py-16">Ничего не нашлось</div>
+  </main>
 </div>
 
-<!-- СЕКЦИИ -->
-<div class="px-4 pt-3 flex gap-2 no-scrollbar overflow-x-auto">
-  <button data-sec="popular"  class="sec-chip chip-on shrink-0 px-4 py-2 rounded-full bg-[#1c1c1e] text-sm font-medium">Популярное</button>
-  <button data-sec="ongoing"  class="sec-chip shrink-0 px-4 py-2 rounded-full bg-[#1c1c1e] text-sm font-medium text-gray-300">Онгоинги</button>
-  <button data-sec="fresh"    class="sec-chip shrink-0 px-4 py-2 rounded-full bg-[#1c1c1e] text-sm font-medium text-gray-300">Свежее</button>
+<!-- ================= ЭКРАН: ПОИСК ================= -->
+<div id="screen-search" class="hidden">
+  <header class="safe-top sticky top-0 z-40 blur-bg border-b border-white/10 px-4 pt-3 pb-3">
+    <div class="flex items-baseline gap-2 pb-2">
+      <h1 class="text-2xl font-extrabold tracking-tight">Поиск</h1>
+      <span class="text-xs text-gray-500">アニメ.</span>
+    </div>
+    <input id="search-input" type="search" placeholder="Название аниме…" autocomplete="off"
+      class="w-full rounded-xl bg-white/10 px-4 py-3 text-[15px] outline-none ring-2 ring-transparent focus:ring-[#0a84ff] placeholder-gray-500">
+  </header>
+
+  <div id="search-status" class="hidden items-center gap-2 px-4 py-3 text-sm text-gray-400">
+    <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-[#0a84ff]"></div>
+    <span id="search-status-text">Ищем…</span>
+  </div>
+
+  <main class="px-4 py-4 pb-24">
+    <div id="search-hint" class="text-center text-gray-600 text-sm py-16">Введите название — например, «Наруто»</div>
+    <div id="search-grid" class="grid grid-cols-3 gap-3 fade-in"></div>
+    <div id="search-empty" class="hidden text-center text-gray-500 text-sm py-16">Ничего не нашлось</div>
+  </main>
 </div>
 
-<!-- КАТАЛОГ -->
-<main class="px-4 py-4 pb-24">
-  <div id="loader" class="flex justify-center py-16"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0a84ff]"></div></div>
-  <div id="grid" class="grid grid-cols-3 gap-3 fade-in"></div>
-  <div id="empty" class="hidden text-center text-gray-500 py-16 text-sm">Ничего не найдено</div>
-</main>
-
-<!-- НИЖНИЙ ТУЛБАР -->
-<nav class="fixed bottom-0 inset-x-0 z-40 blur-bg border-t border-white/10 safe-bottom">
-  <div class="flex justify-around py-2">
-    <button id="tab-home" class="flex flex-col items-center text-[#0a84ff] w-20 py-1">
-      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
-      <span class="text-[10px]">Главная</span></button>
-    <button id="tab-search" class="flex flex-col items-center text-gray-500 w-20 py-1">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-      <span class="text-[10px]">Поиск</span></button>
+<!-- ================= ПЛЕЕР ================= -->
+<div id="player" class="hidden fixed inset-0 z-50 bg-[#0b0b0f] flex-col safe-top">
+  <div class="flex items-center gap-2 px-3 py-3 blur-bg border-b border-white/10">
+    <button id="btn-back" class="flex items-center p-2 text-[#0a84ff] font-medium">
+      <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>Назад
+    </button>
+    <h2 id="p-title" class="flex-1 truncate text-sm font-semibold"></h2>
   </div>
-</nav>
 
-<!-- ПЛЕЕР -->
-<div id="player" class="hidden fixed inset-0 z-50 bg-black flex-col safe-top">
-  <div class="flex items-center justify-between px-3 py-3 blur-bg border-b border-white/10">
-    <button id="btn-back" class="flex items-center text-[#0a84ff] font-medium p-2">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>Назад</button>
-    <h2 id="p-title" class="text-sm font-semibold truncate px-2"></h2>
-    <div class="w-14"></div>
-  </div>
-  <div class="flex-1 overflow-y-auto no-scrollbar pb-10">
+  <div class="flex-1 overflow-y-auto no-scrollbar pb-16">
     <div class="p-4">
-      <div class="relative aspect-video bg-[#111] rounded-xl overflow-hidden mb-3">
+      <div class="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black">
         <iframe id="p-iframe" class="w-full h-full" frameborder="0" allowfullscreen allow="autoplay; fullscreen"></iframe>
-        <div id="p-loader" class="absolute inset-0 grid place-items-center bg-black/60"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>
+        <div id="p-loader" class="absolute inset-0 grid place-items-center bg-black/70">
+          <div class="text-center">
+            <div class="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-white"></div>
+            <div class="text-xs text-gray-400">Загрузка…</div>
+          </div>
+        </div>
+        <div id="p-error" class="hidden absolute inset-0 grid place-items-center bg-black/85 px-4 text-center">
+          <div>
+            <div class="text-3xl mb-2">🎬</div>
+            <div class="text-sm text-gray-300">Источник видео не подключён.</div>
+            <div class="mt-1 text-xs text-gray-500">Попробуйте другую озвучку или откройте в Safari.</div>
+          </div>
+        </div>
       </div>
-      <div id="p-voices" class="flex gap-2 overflow-x-auto no-scrollbar mb-3"></div>
-      <a id="p-safari" href="#" target="_blank" rel="noopener" class="hidden w-full py-3 mb-4 rounded-xl bg-[#0a84ff] text-center font-semibold">Открыть в Safari</a>
-      <div id="p-meta" class="text-xs text-gray-400 mb-2"></div>
-      <p id="p-desc" class="text-sm text-gray-300 leading-relaxed"></p>
+
+      <div id="p-voices" class="mt-3 flex gap-2 overflow-x-auto no-scrollbar"></div>
+      <a id="p-safari" href="#" target="_blank" rel="noopener" class="hidden mt-3 w-full rounded-xl bg-[#0a84ff] py-3 text-center text-sm font-semibold">Открыть в Safari</a>
+      <div id="p-meta" class="mt-3 text-xs text-gray-500"></div>
+      <p id="p-desc" class="mt-2 text-sm leading-relaxed text-gray-300"></p>
     </div>
   </div>
 </div>
 
-<!-- ТОСТ -->
-<div id="toast" class="hidden fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] px-4 py-2 rounded-full bg-[#2c2c2e]/95 text-sm text-center max-w-[90%]"></div>
+<!-- ================= НИЖНИЙ ТУЛБАР ================= -->
+<nav class="fixed inset-x-0 bottom-0 z-40 blur-bg border-t border-white/10 safe-bottom">
+  <div class="flex">
+    <button id="tab-home" class="flex flex-1 flex-col items-center py-2 text-[#0a84ff]">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+      <span class="text-[10px]">Главная</span>
+    </button>
+    <button id="tab-search" class="flex flex-1 flex-col items-center py-2 text-gray-500">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <span class="text-[10px]">Поиск</span>
+    </button>
+  </div>
+</nav>
+
+<div id="toast" class="hidden fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] max-w-[90%] rounded-full bg-[#2c2c2e]/95 px-4 py-2 text-sm text-center"></div>
 
 <script>
 /* ============ КОНФИГ ============ */
-// Если задеплоите свой прокси (снизу в инструкции) — вставьте URL сюда:
-const OWN_PROXY = ''; // пример: 'https://anime-proxy.vercel.app/api/proxy?url='
-
+const OWN_PROXY = ''; // сюда URL своего прокси (api/proxy.js), если задеплоите
 const SHIKI = 'https://shikimori.one';
 const KODIK = 'https://kodik-api.com';
 
-/* Токены Kodik (зашифрованные, из вашего tokens.json) */
 const ENC_TOKENS = [
-  "==QO0ADM3kTZmRTNiRDNjFDM==QOxkDMzQjZ4ADZ4zNhZTN", // stable
-  "==QNyE2NzIjM4ETM3MmNklDM==gY5EzNxIzY0gjZ1kDZkFDN", // unstable
-  "==wMjhDN5QzYkNjZyQmM2ETO==QYjZjYkRjNxMWZ3YTNidzN", // unstable
-  "==QZiZDNxITZlFDZwIjZ3EjM==AN0UmZlVzN4UWO3EDZ3QDN"  // legacy
+  "==QO0ADM3kTZmRTNiRDNjFDM==QOxkDMzQjZ4ADZ4zNhZTN",
+  "==QNyE2NzIjM4ETM3MmNklDM==gY5EzNxIzY0gjZ1kDZkFDN",
+  "==wMjhDN5QzYkNjZyQmM2ETO==QYjZjYkRjNxMWZ3YTNidzN",
+  "==QZiZDNxITZlFDZwIjZ3EjM==AN0UmZlVzN4UWO3EDZ3QDN"
 ];
 
-/* ============ ДЕШИФРОВКА ТОКЕНА (порт вашего Python-кода) ============ */
-function decryptToken(tkn){
+/* ============ ТОКЕНЫ ============ */
+function decryptToken(t){
   try{
-    const half = Math.floor(tkn.length/2);
-    const p1 = tkn.substring(0, half).split('').reverse().join('');
-    const p2 = tkn.substring(half).split('').reverse().join('');
-    return atob(p2) + atob(p1); // p2 -> token[:16], p1 -> token[16:]
+    const h = Math.floor(t.length/2);
+    const a = t.substring(0,h).split('').reverse().join('');
+    const b = t.substring(h).split('').reverse().join('');
+    return atob(b) + atob(a);
   }catch(e){ return null; }
 }
 const TOKENS = ENC_TOKENS.map(decryptToken).filter(Boolean);
 let KODIK_TOKEN = '';
-
-/* ============ FETCH С ЦЕПОЧКОЙ ПРОКСИ (обход CORS) ============ */
-const PROXIES = [
-  u => u,                                                        // напрямую
-  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
-  u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
-  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)
-];
-async function fetchJSON(url, timeout = 9000){
-  const chain = OWN_PROXY ? [u => OWN_PROXY + encodeURIComponent(u), ...PROXIES] : PROXIES;
-  let lastErr;
-  for (const wrap of chain){
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), timeout);
-    try{
-      const res = await fetch(wrap(url), { signal: ctrl.signal });
-      clearTimeout(t);
-      if (!res.ok) { lastErr = new Error('HTTP ' + res.status); continue; }
-      return JSON.parse(await res.text());
-    }catch(e){ clearTimeout(t); lastErr = e; }
-  }
-  throw lastErr || new Error('fetch failed');
-}
-
-/* ============ API: SHIKIMORI ============ */
-async function shiki(path, params){
-  try{
-    const q = new URLSearchParams(params).toString();
-    return await fetchJSON(`${SHIKI}/api/${path}?${q}`);
-  }catch(e){ return null; }
-}
-const normShiki = a => {
-  const img = a.image || a.poster;
-  return { sid: a.id, title: a.russian || a.name,
-    poster: img ? SHIKI + (img.original || img.preview) : null,
-    score: a.score, kind: a.kind, desc: '', genres: (a.genres||[]).map(g=>g.russian) };
-};
-
-/* ============ API: KODIK ============ */
-async function kodik(path, params){
-  if (!KODIK_TOKEN) return null;
-  try{
-    const q = new URLSearchParams({ token: KODIK_TOKEN, ...params }).toString();
-    return await fetchJSON(`${KODIK}/${path}?${q}`);
-  }catch(e){ return null; }
-}
-const normKodik = r => {
-  const md = r.material_data || {};
-  let poster = md.poster_url || md.anime_poster_url || null;
-  if (poster && poster.startsWith('//')) poster = 'https:' + poster;
-  return { sid: r.shikimori_id || null, title: md.title || r.title, poster,
-    score: md.shikimori_rating || null, kind: md.anime_kind || r.type,
-    desc: md.description || md.anime_description || '', genres: md.all_genres || [],
-    kodikLink: r.link };
-};
-
-/* Подбор рабочего токена Kodik (с кешированием) */
 let tokenPromise = null;
 function ensureToken(){
   if (tokenPromise) return tokenPromise;
@@ -174,7 +154,7 @@ function ensureToken(){
     const list = cached ? [cached, ...TOKENS.filter(t=>t!==cached)] : TOKENS;
     for (const t of list){
       KODIK_TOKEN = t;
-      const r = await kodik('search', { shikimori_id: '20', limit: '1' });
+      const r = await kodik('search', { shikimori_id:'20', limit:'1' });
       if (r && Array.isArray(r.results) && r.results.length){
         try{ localStorage.setItem('kodik_token', t); }catch(e){}
         return true;
@@ -185,144 +165,240 @@ function ensureToken(){
   })();
 }
 
-/* ============ UI ============ */
-const $ = id => document.getElementById(id);
-function toast(msg){ const el=$('toast'); el.textContent=msg; el.classList.remove('hidden');
-  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.add('hidden'), 2600); }
-function showLoader(v){ $('loader').classList.toggle('hidden', !v); }
+/* ============ FETCH + ПРОКСИ (обход CORS) ============ */
+const PROXIES = [
+  u => u,
+  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)
+];
+async function fetchJSON(url, timeout = 9000){
+  const chain = OWN_PROXY ? [u => OWN_PROXY + encodeURIComponent(u), ...PROXIES] : PROXIES;
+  let err;
+  for (const wrap of chain){
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeout);
+    try{
+      const r = await fetch(wrap(url), { signal: ctrl.signal });
+      clearTimeout(t);
+      if (!r.ok){ err = new Error('HTTP ' + r.status); continue; }
+      return JSON.parse(await r.text());
+    }catch(e){ clearTimeout(t); err = e; }
+  }
+  throw err || new Error('fetch failed');
+}
+async function shiki(path, params = {}){
+  try{ return await fetchJSON(`${SHIKI}/api/${path}?` + new URLSearchParams(params)); }catch(e){ return null; }
+}
+async function kodik(path, params = {}){
+  if (!KODIK_TOKEN) return null;
+  try{ return await fetchJSON(`${KODIK}/${path}?` + new URLSearchParams({ token: KODIK_TOKEN, ...params })); }catch(e){ return null; }
+}
 
-function renderGrid(items){
-  showLoader(false);
-  $('empty').classList.toggle('hidden', !!items.length);
-  const grid = $('grid'); grid.innerHTML = '';
+/* ============ НОРМАЛИЗАЦИЯ ============ */
+const normShiki = a => {
+  const img = a.image || a.poster;
+  return { sid: a.id, title: a.russian || a.name,
+    poster: img ? SHIKI + (img.original || img.preview) : null,
+    score: a.score, kind: a.kind, year: (a.aired_on || '').slice(0,4),
+    desc: a.description || '', genres: (a.genres||[]).map(g=>g.russian) };
+};
+const normKodik = r => {
+  const md = r.material_data || {};
+  let poster = md.poster_url || md.anime_poster_url || null;
+  if (poster && poster.startsWith('//')) poster = 'https:' + poster;
+  return { sid: r.shikimori_id || null, title: md.title || r.title, poster,
+    score: md.shikimori_rating || null, kind: md.anime_kind || r.type, year: r.year || md.year,
+    desc: md.description || md.anime_description || '', genres: md.all_genres || [],
+    voice: (r.translation && r.translation.title) || null, quality: r.quality || null,
+    kodikLink: r.link };
+};
+function dedupe(arr){ const s = new Set(); return arr.filter(i => { const k = i.sid || i.title; if (s.has(k)) return false; s.add(k); return true; }); }
+
+/* ============ СЕКЦИИ ГЛАВНОЙ ============ */
+const SECTIONS = {
+  popular: { shiki:{limit:24, order:'popularity', kind:'tv'},
+             kodik:{limit:'24', types:'anime,anime-serial', with_material_data:'true', sort:'shikimori_rating', order:'desc'} },
+  ongoing: { shiki:{limit:24, order:'popularity', status:'ongoing', kind:'tv'},
+             kodik:{limit:'24', types:'anime,anime-serial', with_material_data:'true', anime_status:'ongoing'} },
+  fresh:   { shiki:null,
+             kodik:{limit:'24', types:'anime,anime-serial', with_material_data:'true', sort:'updated_at', order:'desc'} },
+  top:     { shiki:{limit:24, order:'score', kind:'tv'},
+             kodik:{limit:'24', types:'anime,anime-serial', with_material_data:'true', sort:'shikimori_rating', order:'desc'} },
+  random:  { shiki:{limit:24, order:'random', kind:'tv'},
+             kodik:{limit:'24', types:'anime,anime-serial', with_material_data:'true'} }
+};
+async function loadSection(sec){
+  homeLoading(true);
+  let items = [];
+  const cfg = SECTIONS[sec] || SECTIONS.popular;
+  if (cfg.shiki){
+    const s = await shiki('animes', cfg.shiki);
+    if (Array.isArray(s) && s.length) items = s.map(normShiki);
+  }
+  if (!items.length){
+    await ensureToken();
+    const k = await kodik('list', cfg.kodik);
+    if (k && k.results && k.results.length) items = dedupe(k.results.map(normKodik));
+  }
+  homeLoading(false);
+  renderGrid($('home-grid'), items);
+  $('home-empty').classList.toggle('hidden', items.length > 0);
+}
+
+/* ============ ПОИСК (отдельный экран) ============ */
+let searchTimer, searchToken = 0;
+async function doSearch(q){
+  const my = ++searchToken;
+  $('search-hint').classList.add('hidden');
+  $('search-empty').classList.add('hidden');
+  $('search-grid').innerHTML = '';
+  searchStatus('Ищем «' + q + '»…');
+
+  let items = [];
+  const s = await shiki('animes', { search:q, limit:24 });
+  if (my !== searchToken) return;
+  if (Array.isArray(s) && s.length) items = s.map(normShiki);
+
+  if (!items.length){
+    await ensureToken();
+    const k = await kodik('search', { title:q, limit:24, types:'anime,anime-serial', with_material_data:'true' });
+    if (my !== searchToken) return;
+    if (k && k.results && k.results.length) items = dedupe(k.results.map(normKodik));
+  }
+  if (my !== searchToken) return;
+
+  searchStatus(null);
+  renderGrid($('search-grid'), items);
+  $('search-empty').classList.toggle('hidden', items.length > 0);
+}
+
+/* ============ UI-ХЕЛПЕРЫ ============ */
+const $ = id => document.getElementById(id);
+function toast(m){ const el = $('toast'); el.textContent = m; el.classList.remove('hidden');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.add('hidden'), 2500); }
+function homeLoading(v){ $('home-loader').classList.toggle('hidden', !v);
+  if (v){ $('home-grid').innerHTML = ''; $('home-empty').classList.add('hidden'); } }
+function searchStatus(msg){ const el = $('search-status');
+  if (!msg){ el.classList.add('hidden'); el.classList.remove('flex'); return; }
+  el.classList.remove('hidden'); el.classList.add('flex');
+  $('search-status-text').textContent = msg; }
+
+function renderGrid(grid, items){
+  grid.innerHTML = '';
   items.forEach(it => {
-    const card = document.createElement('button');
-    card.className = 'text-left active:scale-95 transition-transform';
-    card.onclick = () => openPlayer(it);
-    card.innerHTML = `
-      <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-[#1c1c1e] mb-1.5">
-        ${it.poster ? `<img src="${it.poster}" loading="lazy" class="w-full h-full object-cover">` : '<div class="w-full h-full grid place-items-center text-gray-600 text-xs">нет постера</div>'}
-        ${it.score ? `<span class="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/70 text-[10px] font-bold">★ ${it.score}</span>` : ''}
+    const b = document.createElement('button');
+    b.className = 'text-left active:scale-95 transition-transform';
+    b.onclick = () => openPlayer(it);
+    b.innerHTML = `
+      <div class="relative mb-1.5 aspect-[2/3] overflow-hidden rounded-lg bg-white/5">
+        ${it.poster ? `<img src="${it.poster}" loading="lazy" class="h-full w-full object-cover">` : '<div class="grid h-full w-full place-items-center text-[10px] text-gray-600">нет постера</div>'}
+        ${it.score ? `<span class="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold">★ ${it.score}</span>` : ''}
       </div>
-      <div class="text-xs font-medium line-clamp-2 leading-tight">${it.title}</div>`;
-    grid.appendChild(card);
+      <div class="line-clamp-2 text-xs font-medium leading-tight">${it.title}</div>`;
+    grid.appendChild(b);
   });
 }
 
-/* ============ ЗАГРУЗКА СЕКЦИЙ (Shikimori -> fallback Kodik) ============ */
-async function loadSection(sec){
-  showLoader(true); $('empty').classList.add('hidden'); $('grid').innerHTML='';
-  let items = [];
-  if (sec === 'popular'){
-    const s = await shiki('animes', { limit:24, order:'popularity', kind:'tv' });
-    if (Array.isArray(s) && s.length) items = s.map(normShiki);
-  } else if (sec === 'ongoing'){
-    const s = await shiki('animes', { limit:24, status:'ongoing', order:'popularity', kind:'tv' });
-    if (Array.isArray(s) && s.length) items = s.map(normShiki);
-  }
-  if (!items.length){ // резерв: Kodik с material_data (постеры+описания)
-    await ensureToken();
-    const params = { limit:'24', with_material_data:'true', types:'anime,anime-serial' };
-    if (sec === 'ongoing') params.anime_status = 'ongoing';
-    const k = await kodik('list', params);
-    if (k?.results?.length) items = dedupe(k.results.map(normKodik));
-  }
-  renderGrid(items);
+function setTab(name){
+  const home = name === 'home';
+  $('screen-home').classList.toggle('hidden', !home);
+  $('screen-search').classList.toggle('hidden', home);
+  $('tab-home').classList.toggle('text-[#0a84ff]', home);
+  $('tab-home').classList.toggle('text-gray-500', !home);
+  $('tab-search').classList.toggle('text-[#0a84ff]', !home);
+  $('tab-search').classList.toggle('text-gray-500', home);
+  if (!home) setTimeout(() => $('search-input').focus(), 60);
 }
-async function doSearch(q){
-  showLoader(true); $('empty').classList.add('hidden'); $('grid').innerHTML='';
-  let items = [];
-  const s = await shiki('animes', { search:q, limit:24 });
-  if (Array.isArray(s) && s.length) items = s.map(normShiki);
-  if (!items.length){
-    await ensureToken();
-    const k = await kodik('search', { title:q, limit:24, with_material_data:'true' });
-    if (k?.results?.length) items = dedupe(k.results.map(normKodik));
-  }
-  renderGrid(items);
-}
-function dedupe(arr){ const seen=new Set(); return arr.filter(i=>{ const k=i.sid||i.title; if(seen.has(k))return false; seen.add(k); return true; }); }
 
 /* ============ ПЛЕЕР ============ */
-let currentResults = [];
 async function openPlayer(item){
   $('player').classList.remove('hidden'); $('player').classList.add('flex');
   document.body.style.overflow = 'hidden';
   $('p-title').textContent = item.title;
+  $('p-iframe').src = 'about:blank';
+  $('p-loader').classList.remove('hidden');
+  $('p-error').classList.add('hidden');
+  $('p-voices').innerHTML = '';
+  $('p-safari').classList.add('hidden');
+  $('p-meta').textContent = [item.kind, item.year, item.score ? '★ ' + item.score : ''].filter(Boolean).join(' · ');
   $('p-desc').textContent = item.desc || 'Загрузка…';
-  $('p-meta').textContent = [item.kind, item.score ? '★ '+item.score : ''].filter(Boolean).join(' · ');
-  $('p-iframe').src = 'about:blank'; $('p-loader').classList.remove('hidden');
-  $('p-voices').innerHTML = ''; $('p-safari').classList.add('hidden');
 
-  // Доописание из Shikimori, если его нет
   if (!item.desc && item.sid){
-    const d = await shiki(`animes/${item.sid}`, {});
-    if (d){ item.desc = d.description || ''; item.genres = (d.genres||[]).map(g=>g.russian);
-      $('p-desc').textContent = item.desc || 'Описание отсутствует';
-      if (item.genres.length) $('p-meta').textContent = item.genres.join(' / ');
-    }
+    const d = await shiki('animes/' + item.sid);
+    if (d && d.description){ item.desc = d.description; $('p-desc').textContent = d.description; }
+    else $('p-desc').textContent = 'Описание отсутствует';
   } else $('p-desc').textContent = item.desc || 'Описание отсутствует';
 
   await ensureToken();
   let results = [];
-  if (item.kodikLink) results = [item];
-  else if (item.sid){
-    const k = await kodik('search', { shikimori_id: item.sid, with_material_data:'true' });
-    if (k?.results?.length) results = k.results.map(normKodik);
+  if (item.sid){
+    const k = await kodik('search', { shikimori_id:item.sid, with_material_data:'true' });
+    if (k && k.results && k.results.length) results = k.results.map(normKodik);
   }
   if (!results.length){
-    const k = await kodik('search', { title: item.title, limit:'5' });
-    if (k?.results?.length) results = k.results.map(normKodik);
+    const k = await kodik('search', { title:item.title, limit:'10', types:'anime,anime-serial' });
+    if (k && k.results && k.results.length) results = dedupe(k.results.map(normKodik));
   }
-  currentResults = results;
-
   if (!results.length){
-    $('p-loader').innerHTML = '<div class="text-center text-sm text-red-400 px-4">Плеер не найден.<br>Проверьте токены/прокси.</div>';
+    $('p-loader').classList.add('hidden');
+    $('p-error').classList.remove('hidden');
     return;
   }
-  // Чипы озвучек (Kodik отдаёт каждую озвучку отдельным элементом)
-  const voices = $('p-voices');
+
+  const v = $('p-voices');
   results.forEach((r, i) => {
     const b = document.createElement('button');
-    b.className = 'shrink-0 px-3 py-1.5 rounded-full bg-[#1c1c1e] text-xs ' + (i===0?'chip-on':'text-gray-300');
-    b.textContent = r.kodikLink ? (resultsRawTitle(results,i)) : r.title;
-    b.onclick = () => { voices.querySelectorAll('button').forEach(x=>x.classList.remove('chip-on')); b.classList.add('chip-on'); setPlayer(results[i]); };
-    voices.appendChild(b);
+    b.className = 'voice-chip chipx shrink-0 rounded-full px-3 py-1.5 text-xs' + (i === 0 ? ' on' : '');
+    b.textContent = (r.voice || 'Вариант ' + (i+1)) + (r.quality ? ' · ' + r.quality : '');
+    b.onclick = () => { v.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on'); setPlayer(r); };
+    v.appendChild(b);
   });
   setPlayer(results[0]);
 }
-function resultsRawTitle(arr,i){ return arr[i].voiceTitle || ('Вариант '+(i+1)); }
-function setPlayer(item){
-  let link = item.kodikLink || '';
-  if (link.startsWith('//')) link = 'https:' + link;
-  $('p-iframe').src = link;
+function setPlayer(r){
+  let l = r.kodikLink || '';
+  if (l.startsWith('//')) l = 'https:' + l;
+  $('p-iframe').src = l;
   $('p-iframe').onload = () => $('p-loader').classList.add('hidden');
-  const s = $('p-safari'); s.href = link; s.classList.remove('hidden');
+  const s = $('p-safari'); s.href = l; s.classList.remove('hidden');
+  $('p-meta').textContent = [r.kind, r.year, r.quality, r.voice ? '🎙 ' + r.voice : '', r.score ? '★ ' + r.score : ''].filter(Boolean).join(' · ');
 }
 function closePlayer(){
   $('player').classList.add('hidden'); $('player').classList.remove('flex');
-  $('p-iframe').src = 'about:blank'; document.body.style.overflow = '';
+  $('p-iframe').src = 'about:blank';
+  document.body.style.overflow = '';
 }
 
 /* ============ СОБЫТИЯ ============ */
 document.querySelectorAll('.sec-chip').forEach(ch => ch.onclick = () => {
-  document.querySelectorAll('.sec-chip').forEach(c=>c.classList.remove('chip-on'));
-  ch.classList.add('chip-on'); loadSection(ch.dataset.sec);
+  document.querySelectorAll('.sec-chip').forEach(c => c.classList.remove('on'));
+  ch.classList.add('on');
+  if (ch.dataset.sec === 'random') toast('🍥 Случайная подборка');
+  loadSection(ch.dataset.sec);
 });
+$('tab-home').onclick = () => setTab('home');
+$('tab-search').onclick = () => setTab('search');
 $('btn-back').onclick = closePlayer;
-$('btn-search').onclick = () => { $('search-bar').classList.toggle('hidden'); $('search-input').focus(); };
-$('tab-search').onclick = () => { $('search-bar').classList.remove('hidden'); $('search-input').focus(); };
-$('tab-home').onclick = () => { $('search-bar').classList.add('hidden'); $('search-input').value=''; loadSection('popular'); };
 
-let st; $('search-input').addEventListener('input', e => {
-  clearTimeout(st); const q = e.target.value.trim();
-  if (!q) return loadSection('popular');
-  st = setTimeout(() => doSearch(q), 500);
+$('search-input').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  const q = e.target.value.trim();
+  if (!q){
+    searchToken++;
+    searchStatus(null);
+    $('search-grid').innerHTML = '';
+    $('search-empty').classList.add('hidden');
+    $('search-hint').classList.remove('hidden');
+    return;
+  }
+  searchTimer = setTimeout(() => doSearch(q), 450);
 });
 
-/* Старт */
-ensureToken();          // в фоне подбираем рабочий токен Kodik
-loadSection('popular'); // каталог
+/* ============ СТАРТ ============ */
+setTab('home');
+ensureToken();            // в фоне подбираем рабочий токен Kodik
+loadSection('popular');   // каталог
 </script>
 </body>
 </html>
