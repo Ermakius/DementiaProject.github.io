@@ -7,135 +7,159 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b0b0f">
 <title>Anime · アニメ</title>
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" id="manifest-link">
 <link rel="preconnect" href="https://shikimori.one" crossorigin>
-<link rel="dns-prefetch" href="https://api.allorigins.win">
-<link rel="manifest" href='data:application/manifest+json,{"name":"Anime PWA","short_name":"Anime","start_url":".","display":"standalone","background_color":"#0b0b0f","theme_color":"#0b0b0f"}'>
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://api.allorigins.win">
+<link rel="dns-prefetch" href="https://kodik-api.com">
 <style>
-  body{background:#0b0b0f;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Roboto,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
-  .safe-top{padding-top:env(safe-area-inset-top)} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
-  .no-scrollbar::-webkit-scrollbar{display:none}
-  .blur-bg{background:rgba(15,15,20,.75);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-  .chipx{background:rgba(255,255,255,.07);color:#d1d5db}
-  .on{background:#0a84ff!important;color:#fff!important}
-  .fade-in{animation:fadeIn .25s ease} @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-  .card{content-visibility:auto;contain-intrinsic-size:0 220px}
+:root{--bg:#0b0b0f;--card:#17171c;--blue:#0a84ff;--mut:#98989f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:#fff;font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Roboto,Arial,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+img{display:block}
+.hidden{display:none!important}
+.safe-top{padding-top:env(safe-area-inset-top)} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
+.top{position:sticky;top:0;z-index:40;padding:12px 16px 8px;background:rgba(15,15,20,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.08)}
+.logo-row{display:flex;align-items:baseline;gap:8px}
+.logo{font-size:24px;font-weight:800;letter-spacing:-.5px}
+.logo-sub{font-size:11px;color:var(--mut)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.07);color:#d1d5db;font-size:14px;font-weight:500}
+.chip.on{background:var(--blue);color:#fff}
+.content{padding:16px 16px 96px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.card{text-align:left;transition:transform .1s}
+.card:active{transform:scale(.95)}
+.poster{position:relative;aspect-ratio:2/3;border-radius:10px;overflow:hidden;background:var(--card);margin-bottom:6px;content-visibility:auto;contain-intrinsic-size:0 220px}
+.poster img{width:100%;height:100%;object-fit:cover}
+.ph{width:100%;height:100%;display:grid;place-items:center;font-size:10px;color:#565661}
+.badge{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700}
+.ctitle{font-size:12px;font-weight:500;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.loader{display:flex;flex-direction:column;align-items:center;gap:8px;padding:64px 0;color:var(--mut);font-size:12px}
+.spin{width:32px;height:32px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:var(--blue);animation:sp .8s linear infinite}
+.spin.small{width:16px;height:16px;border-width:2px}
+@keyframes sp{to{transform:rotate(1turn)}}
+.more{display:flex;justify-content:center;align-items:center;gap:8px;padding:24px 0;color:var(--mut);font-size:12px}
+.empty{text-align:center;color:var(--mut);font-size:14px;padding:64px 0}
+.search{width:100%;margin-top:10px;background:rgba(255,255,255,.1);border:0;border-radius:12px;padding:12px 16px;color:#fff;font-size:15px;outline:none;box-shadow:0 0 0 2px transparent}
+.search:focus{box-shadow:0 0 0 2px var(--blue)}
+.search::placeholder{color:#6b6b74}
+.status{display:flex;align-items:center;gap:8px;padding:12px 16px;color:var(--mut);font-size:14px}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:rgba(15,15,20,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid rgba(255,255,255,.08)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;color:#6b6b74}
+.tab svg{width:24px;height:24px}
+.tab span{font-size:10px}
+.tab.on{color:var(--blue)}
+.player{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;flex-direction:column}
+.player.open{display:flex}
+.p-head{display:flex;align-items:center;gap:8px;padding:12px;background:rgba(15,15,20,.78);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.08)}
+.back{display:flex;align-items:center;gap:4px;color:var(--blue);font-weight:500;padding:8px}
+.back svg{width:20px;height:20px}
+.p-title{flex:1;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-body{flex:1;overflow-y:auto;padding:16px 16px 64px;scrollbar-width:none}
+.p-body::-webkit-scrollbar{display:none}
+.p-wrap{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,.08)}
+.p-wrap iframe{width:100%;height:100%;border:0}
+.p-overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.7);text-align:center;padding:16px}
+.p-overlay .txt{font-size:12px;color:#9ca3af;margin-top:8px}
+.p-err-emoji{font-size:30px;margin-bottom:8px}
+.p-err-title{font-size:14px;color:#d1d5db}
+.p-err-sub{font-size:12px;color:#6b6b74;margin-top:4px}
+.voices{display:flex;gap:8px;overflow-x:auto;margin-top:12px;scrollbar-width:none}
+.voices::-webkit-scrollbar{display:none}
+.voice{flex:0 0 auto;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.07);font-size:12px;color:#d1d5db}
+.voice.on{background:var(--blue);color:#fff}
+.meta{margin-top:12px;font-size:12px;color:#6b6b74}
+.desc{margin-top:8px;font-size:14px;line-height:1.55;color:#d1d5db}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:60;background:rgba(44,44,46,.95);padding:8px 16px;border-radius:999px;font-size:14px;max-width:90%;text-align:center}
 </style>
 </head>
-<body class="antialiased">
+<body>
 
-<!-- ================= ЭКРАН: ГЛАВНАЯ ================= -->
+<!-- ================= ГЛАВНАЯ ================= -->
 <div id="screen-home">
-  <header class="safe-top sticky top-0 z-40 blur-bg border-b border-white/10 px-4 pt-3 pb-2">
-    <div class="flex items-baseline gap-2">
-      <h1 class="text-2xl font-extrabold tracking-tight">Anime</h1>
-      <span class="text-xs text-gray-500">アニメ.</span>
-    </div>
-    <div class="flex gap-2 overflow-x-auto no-scrollbar pt-2 pb-1">
-      <button data-sec="popular" class="sec-chip on shrink-0 px-4 py-2 rounded-full chipx text-sm font-medium">Популярное</button>
-      <button data-sec="ongoing" class="sec-chip shrink-0 px-4 py-2 rounded-full chipx text-sm font-medium">Онгоинги</button>
-      <button data-sec="fresh"   class="sec-chip shrink-0 px-4 py-2 rounded-full chipx text-sm font-medium">Свежее</button>
-      <button data-sec="top"     class="sec-chip shrink-0 px-4 py-2 rounded-full chipx text-sm font-medium">Топ рейтинга</button>
-      <button data-sec="random"  class="sec-chip shrink-0 px-4 py-2 rounded-full chipx text-sm">🍥</button>
+  <header class="top safe-top">
+    <div class="logo-row"><h1 class="logo">Anime</h1><span class="logo-sub">アニメ.</span></div>
+    <div class="chips">
+      <button data-sec="popular" class="sec-chip on">Популярное</button>
+      <button data-sec="ongoing" class="sec-chip">Онгоинги</button>
+      <button data-sec="fresh"   class="sec-chip">Свежее</button>
+      <button data-sec="top"     class="sec-chip">Топ рейтинга</button>
+      <button data-sec="random"  class="sec-chip">🍥</button>
     </div>
   </header>
-
-  <main class="px-4 py-4 pb-24">
-    <div id="home-loader" class="flex flex-col items-center gap-2 py-16">
-      <div class="animate-spin rounded-full h-8 w-8 border-2 border-white/15 border-t-[#0a84ff]"></div>
-      <span class="text-xs text-gray-500">Загрузка…</span>
-    </div>
-    <div id="home-grid" class="grid grid-cols-3 gap-3 fade-in"></div>
-    <div id="home-more" class="hidden flex items-center justify-center gap-2 py-6 text-xs text-gray-500">
-      <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-[#0a84ff]"></div>Ещё…
-    </div>
-    <div id="home-empty" class="hidden text-center text-gray-500 text-sm py-16">Ничего не нашлось</div>
+  <main class="content">
+    <div id="home-loader" class="loader"><div class="spin"></div>Загрузка…</div>
+    <div id="home-grid" class="grid"></div>
+    <div id="home-more" class="more hidden"><div class="spin small"></div>Ещё…</div>
+    <div id="home-empty" class="empty hidden">Ничего не нашлось</div>
   </main>
 </div>
 
-<!-- ================= ЭКРАН: ПОИСК ================= -->
+<!-- ================= ПОИСК ================= -->
 <div id="screen-search" class="hidden">
-  <header class="safe-top sticky top-0 z-40 blur-bg border-b border-white/10 px-4 pt-3 pb-3">
-    <div class="flex items-baseline gap-2 pb-2">
-      <h1 class="text-2xl font-extrabold tracking-tight">Поиск</h1>
-      <span class="text-xs text-gray-500">アニメ.</span>
-    </div>
-    <input id="search-input" type="search" placeholder="Название аниме…" autocomplete="off"
-      class="w-full rounded-xl bg-white/10 px-4 py-3 text-[15px] outline-none ring-2 ring-transparent focus:ring-[#0a84ff] placeholder-gray-500">
+  <header class="top safe-top">
+    <div class="logo-row"><h1 class="logo">Поиск</h1><span class="logo-sub">アニメ.</span></div>
+    <input id="search-input" type="search" class="search" placeholder="Название аниме…" autocomplete="off">
   </header>
-
-  <div id="search-status" class="hidden items-center gap-2 px-4 py-3 text-sm text-gray-400">
-    <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-[#0a84ff]"></div>
-    <span id="search-status-text">Ищем…</span>
-  </div>
-
-  <main class="px-4 py-4 pb-24">
-    <div id="search-hint" class="text-center text-gray-600 text-sm py-16">Введите название — например, «Наруто»</div>
-    <div id="search-grid" class="grid grid-cols-3 gap-3 fade-in"></div>
-    <div id="search-more" class="hidden flex items-center justify-center gap-2 py-6 text-xs text-gray-500">
-      <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/15 border-t-[#0a84ff]"></div>Ещё…
-    </div>
-    <div id="search-empty" class="hidden text-center text-gray-500 text-sm py-16">Ничего не нашлось</div>
+  <div id="search-status" class="status hidden"><div class="spin small"></div><span id="search-status-text">Ищем…</span></div>
+  <main class="content">
+    <div id="search-hint" class="empty">Введите название — например, «Наруто»</div>
+    <div id="search-grid" class="grid"></div>
+    <div id="search-more" class="more hidden"><div class="spin small"></div>Ещё…</div>
+    <div id="search-empty" class="empty hidden">Ничего не нашлось</div>
   </main>
 </div>
 
 <!-- ================= ПЛЕЕР ================= -->
-<div id="player" class="hidden fixed inset-0 z-50 bg-[#0b0b0f] flex-col safe-top">
-  <div class="flex items-center gap-2 px-3 py-3 blur-bg border-b border-white/10">
-    <button id="btn-back" class="flex items-center p-2 text-[#0a84ff] font-medium">
-      <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>Назад
-    </button>
-    <h2 id="p-title" class="flex-1 truncate text-sm font-semibold"></h2>
+<div id="player" class="player safe-top">
+  <div class="p-head">
+    <button id="btn-back" class="back"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>Назад</button>
+    <h2 id="p-title" class="p-title"></h2>
   </div>
-
-  <div class="flex-1 overflow-y-auto no-scrollbar pb-16">
-    <div class="p-4">
-      <div class="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black">
-        <iframe id="p-iframe" class="w-full h-full" frameborder="0" allowfullscreen allow="autoplay; fullscreen"></iframe>
-        <div id="p-loader" class="absolute inset-0 grid place-items-center bg-black/70">
-          <div class="text-center">
-            <div class="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-white"></div>
-            <div class="text-xs text-gray-400">Загрузка…</div>
-          </div>
-        </div>
-        <div id="p-error" class="hidden absolute inset-0 grid place-items-center bg-black/85 px-4 text-center">
-          <div>
-            <div class="text-3xl mb-2">🎬</div>
-            <div class="text-sm text-gray-300">Источник видео не подключён.</div>
-            <div class="mt-1 text-xs text-gray-500">Попробуйте другую озвучку.</div>
-          </div>
-        </div>
-      </div>
-
-      <div id="p-voices" class="mt-3 flex gap-2 overflow-x-auto no-scrollbar"></div>
-      <div id="p-meta" class="mt-3 text-xs text-gray-500"></div>
-      <p id="p-desc" class="mt-2 text-sm leading-relaxed text-gray-300"></p>
+  <div class="p-body">
+    <div class="p-wrap">
+      <iframe id="p-iframe" allowfullscreen allow="autoplay; fullscreen"></iframe>
+      <div id="p-loader" class="p-overlay"><div><div class="spin" style="margin:0 auto"></div><div class="txt">Загрузка…</div></div></div>
+      <div id="p-error" class="p-overlay hidden"><div><div class="p-err-emoji">🎬</div><div class="p-err-title">Источник видео не подключён.</div><div class="p-err-sub">Попробуйте другую озвучку.</div></div></div>
     </div>
+    <div id="p-voices" class="voices"></div>
+    <div id="p-meta" class="meta"></div>
+    <p id="p-desc" class="desc"></p>
   </div>
 </div>
 
-<!-- ================= НИЖНИЙ ТУЛБАР ================= -->
-<nav class="fixed inset-x-0 bottom-0 z-40 blur-bg border-t border-white/10 safe-bottom">
-  <div class="flex">
-    <button id="tab-home" class="flex flex-1 flex-col items-center py-2 text-[#0a84ff]">
-      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
-      <span class="text-[10px]">Главная</span>
-    </button>
-    <button id="tab-search" class="flex flex-1 flex-col items-center py-2 text-gray-500">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-      <span class="text-[10px]">Поиск</span>
-    </button>
-  </div>
+<!-- ================= ТАБЫ ================= -->
+<nav class="tabs safe-bottom">
+  <button id="tab-home" class="tab on">
+    <svg fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+    <span>Главная</span></button>
+  <button id="tab-search" class="tab">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    <span>Поиск</span></button>
 </nav>
 
-<div id="toast" class="hidden fixed left-1/2 -translate-x-1/2 bottom-24 z-[60] max-w-[90%] rounded-full bg-[#2c2c2e]/95 px-4 py-2 text-sm text-center"></div>
+<div id="toast" class="toast hidden"></div>
 
 <script>
+/* ============ PWA МАНИФЕСТ С ИКОНКОЙ (icon.png рядом с index.html) ============ */
+(function(){
+  const iconUrl = new URL('icon.png', location.href).href;
+  const m = { name:'Anime PWA', short_name:'Anime', start_url:'.', display:'standalone',
+    background_color:'#0b0b0f', theme_color:'#0b0b0f',
+    icons:[{src:iconUrl,sizes:'192x192',type:'image/png',purpose:'any'},{src:iconUrl,sizes:'512x512',type:'image/png'}] };
+  document.getElementById('manifest-link').href =
+    URL.createObjectURL(new Blob([JSON.stringify(m)], { type:'application/manifest+json' }));
+})();
+
 /* ============ КОНФИГ ============ */
 const OWN_PROXY = '';
 const SHIKI = 'https://shikimori.one';
 const KODIK = 'https://kodik-api.com';
-const LIMIT = 30;
+const LIMIT = 30, TTL = 10*60*1000, CAP = 300;
 
 const ENC_TOKENS = [
   "==QO0ADM3kTZmRTNiRDNjFDM==QOxkDMzQjZ4ADZ4zNhZTN",
@@ -143,8 +167,6 @@ const ENC_TOKENS = [
   "==wMjhDN5QzYkNjZyQmM2ETO==QYjZjYkRjNxMWZ3YTNidzN",
   "==QZiZDNxITZlFDZwIjZ3EjM==AN0UmZlVzN4UWO3EDZ3QDN"
 ];
-
-/* ============ ТОКЕНЫ (кеш = без лишнего запроса) ============ */
 function decryptToken(t){
   try{
     const h = Math.floor(t.length/2);
@@ -154,13 +176,12 @@ function decryptToken(t){
   }catch(e){ return null; }
 }
 const TOKENS = ENC_TOKENS.map(decryptToken).filter(Boolean);
-let KODIK_TOKEN = '';
-let tokenPromise = null;
+let KODIK_TOKEN = '', tokenPromise = null;
 function ensureToken(){
   if (KODIK_TOKEN) return Promise.resolve(true);
   if (tokenPromise) return tokenPromise;
   let cached = null; try{ cached = localStorage.getItem('kodik_token'); }catch(e){}
-  if (cached){ KODIK_TOKEN = cached; return Promise.resolve(true); } // мгновенно, без проверки
+  if (cached){ KODIK_TOKEN = cached; return Promise.resolve(true); }
   return tokenPromise = (async () => {
     for (const t of TOKENS){
       KODIK_TOKEN = t;
@@ -175,12 +196,12 @@ function ensureToken(){
   })();
 }
 
-/* ============ FETCH + ПРОКСИ ============ */
+/* ============ FETCH + ПРОКСИ (быстрый сначала) ============ */
 const PROXIES = [
-  u => u,
   u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
   u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
-  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)
+  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+  u => u
 ];
 async function fetchJSON(url, timeout = 6000){
   const chain = OWN_PROXY ? [u => OWN_PROXY + encodeURIComponent(u), ...PROXIES] : PROXIES;
@@ -209,7 +230,8 @@ async function kodik(path, params = {}){
 const normShiki = a => {
   const img = a.image || a.poster;
   return { sid: a.id, title: a.russian || a.name,
-    poster: img ? SHIKI + (img.preview || img.original) : null, // preview = лёгкие картинки
+    poster: img ? SHIKI + (img.preview || img.original) : null,
+    posterFull: img ? SHIKI + img.original : null,
     score: a.score, kind: a.kind, year: (a.aired_on || '').slice(0,4),
     desc: a.description || '', genres: (a.genres||[]).map(g=>g.russian) };
 };
@@ -217,12 +239,21 @@ const normKodik = r => {
   const md = r.material_data || {};
   let poster = md.poster_url || md.anime_poster_url || null;
   if (poster && poster.startsWith('//')) poster = 'https:' + poster;
-  return { sid: r.shikimori_id || null, title: md.title || r.title, poster,
+  return { sid: r.shikimori_id || null, title: md.title || r.title, poster, posterFull: poster,
     score: md.shikimori_rating || null, kind: md.anime_kind || r.type, year: r.year || md.year,
     desc: md.description || md.anime_description || '', genres: md.all_genres || [],
     voice: (r.translation && r.translation.title) || null, quality: r.quality || null,
     kodikLink: r.link };
 };
+
+/* Картинки: фолбэк preview -> original -> заглушка (картинки будут всегда) */
+function imgErr(im){
+  const alt = im.getAttribute('data-alt');
+  if (alt && im.src !== alt){ im.removeAttribute('data-alt'); im.src = alt; return; }
+  const d = document.createElement('div');
+  d.className = 'ph'; d.textContent = '🎬';
+  im.replaceWith(d);
+}
 
 /* ============ СЕКЦИИ ============ */
 const SECTIONS = {
@@ -238,41 +269,69 @@ const SECTIONS = {
              kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true'} }
 };
 
-/* ============ ЛЕНТА (бесконечная) ============ */
+/* ============ ХРАНИЛИЩЕ (мгновенный старт) ============ */
+const LS = {
+  get(k){ try{ return JSON.parse(localStorage.getItem('anime_' + k)); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem('anime_' + k, JSON.stringify(v)); }catch(e){} }
+};
 const $ = id => document.getElementById(id);
+const freshState = () => ({ items:[], keys:new Set(), page:1, nextUrl:null, done:false, source:null, rendered:0, loading:false });
+
 const home = { sec:'popular' };
 let homeState = null, homeReq = 0;
-const homeCache = {}; // кеш секций в памяти — мгновенное переключение
+
+function persistHome(){
+  const f = homeState; if (!f || !f.items.length) return;
+  LS.set('sec_' + home.sec, { t:Date.now(), items:f.items.slice(0,CAP), page:f.page, nextUrl:f.nextUrl, done:f.done, source:f.source });
+}
 
 async function loadHome(sec){
   const my = ++homeReq;
   home.sec = sec;
-  const cached = homeCache[sec];
-  if (cached && cached.items.length){ // мгновенно из кеша
-    homeState = cached;
+  const cached = LS.get('sec_' + sec);
+  if (cached && cached.items && cached.items.length){
+    homeState = { ...freshState(), items:cached.items,
+      keys:new Set(cached.items.map(i => i.sid || i.title)),
+      page:cached.page || 1, nextUrl:cached.nextUrl || null, done:!!cached.done, source:cached.source || null };
     homeLoading(false);
     $('home-grid').innerHTML = '';
-    appendCards($('home-grid'), cached.items);
-    cached.rendered = cached.items.length;
+    appendCards($('home-grid'), homeState.items);
+    homeState.rendered = homeState.items.length;
     $('home-empty').classList.add('hidden');
+    if (Date.now() - (cached.t || 0) < TTL) return;   // свежий кеш — сеть не трогаем
+    refreshHome(sec, my);                              // старый кеш — обновим в фоне
     return;
   }
-  homeState = { items:[], keys:new Set(), page:1, nextUrl:null, done:false, source:null, rendered:0, loading:false };
+  homeState = freshState();
   homeLoading(true);
-  await fetchHomeChunk();
+  await fetchChunk(homeState, sec);
   if (my !== homeReq) return;
   homeLoading(false);
   appendCards($('home-grid'), homeState.items);
   homeState.rendered = homeState.items.length;
   $('home-empty').classList.toggle('hidden', homeState.items.length > 0);
-  if (homeState.items.length) homeCache[sec] = homeState;
+  persistHome();
 }
 
-async function fetchHomeChunk(){
-  const f = homeState, cfg = SECTIONS[home.sec];
+async function refreshHome(sec, my){
+  const f = freshState();
+  await fetchChunk(f, sec);
+  if (f.items.length) LS.set('sec_' + sec, { t:Date.now(), items:f.items.slice(0,CAP), page:f.page, nextUrl:f.nextUrl, done:f.done, source:f.source });
+  if (my !== homeReq) return;
+  if (window.scrollY < 400 && homeState.rendered === homeState.items.length && f.items.length){
+    homeState = f;
+    $('home-grid').innerHTML = '';
+    appendCards($('home-grid'), f.items);
+    f.rendered = f.items.length;
+  }
+}
+
+async function fetchChunk(f, sec){
   if (!f || f.loading) return;
   f.loading = true;
-  if (f.rendered > 0) $('home-more').classList.remove('hidden');
+  const isAppend = f.rendered > 0;
+  if (isAppend) $('home-more').classList.remove('hidden');
+  const cfg = SECTIONS[sec];
   let got = [];
   if (f.source === 'shiki'){
     const s = await shiki('animes', Object.assign({}, cfg.shiki, { limit:LIMIT, page:f.page }));
@@ -298,7 +357,7 @@ async function fetchHomeChunk(){
   }
   const before = f.items.length;
   got.forEach(it => { const k = it.sid || it.title; if (!f.keys.has(k)){ f.keys.add(k); f.items.push(it); } });
-  if (f.rendered > 0 && f.items.length === before) f.done = true; // не зацикливаться впустую
+  if (isAppend && f.items.length === before) f.done = true;
   f.loading = false;
   $('home-more').classList.add('hidden');
 }
@@ -307,13 +366,14 @@ async function loadHomeMore(){
   const f = homeState;
   if (!f || f.loading || f.done) return;
   const my = homeReq;
-  await fetchHomeChunk();
+  await fetchChunk(f, home.sec);
   if (my !== homeReq) return;
   appendCards($('home-grid'), f.items.slice(f.rendered));
   f.rendered = f.items.length;
+  persistHome();
 }
 
-/* ============ ПОИСК (свой экран + бесконечный) ============ */
+/* ============ ПОИСК ============ */
 let searchState = null, searchReq = 0, searchCache = null, searchTimer;
 
 async function doSearch(q, append = false){
@@ -329,7 +389,7 @@ async function doSearch(q, append = false){
       searchStatus(null);
       return;
     }
-    searchState = { q, items:[], keys:new Set(), page:1, done:false, source:null, rendered:0, loading:false };
+    searchState = { q, ...freshState() };
     $('search-hint').classList.add('hidden');
     $('search-empty').classList.add('hidden');
     $('search-grid').innerHTML = '';
@@ -374,10 +434,9 @@ async function fetchSearchChunk(q){
 async function loadSearchMore(){
   const f = searchState;
   if (!f || f.loading || f.done) return;
-  const q = $('search-input').value.trim();
-  if (q !== f.q) return;
+  if ($('search-input').value.trim() !== f.q) return;
   const my = searchReq;
-  await fetchSearchChunk(q);
+  await fetchSearchChunk(f.q);
   if (my !== searchReq) return;
   appendCards($('search-grid'), f.items.slice(f.rendered));
   f.rendered = f.items.length;
@@ -389,21 +448,22 @@ function toast(m){ const el = $('toast'); el.textContent = m; el.classList.remov
 function homeLoading(v){ $('home-loader').classList.toggle('hidden', !v);
   if (v){ $('home-grid').innerHTML = ''; $('home-empty').classList.add('hidden'); } }
 function searchStatus(msg){ const el = $('search-status');
-  if (!msg){ el.classList.add('hidden'); el.classList.remove('flex'); return; }
-  el.classList.remove('hidden'); el.classList.add('flex');
-  $('search-status-text').textContent = msg; }
+  el.classList.toggle('hidden', !msg);
+  if (msg) $('search-status-text').textContent = msg; }
 
 function appendCards(grid, arr){
   arr.forEach(it => {
     const b = document.createElement('button');
-    b.className = 'card text-left active:scale-95 transition-transform';
+    b.className = 'card';
     b.onclick = () => openPlayer(it);
     b.innerHTML = `
-      <div class="relative mb-1.5 aspect-[2/3] overflow-hidden rounded-lg bg-white/5">
-        ${it.poster ? `<img src="${it.poster}" loading="lazy" decoding="async" class="h-full w-full object-cover">` : '<div class="grid h-full w-full place-items-center text-[10px] text-gray-600">нет постера</div>'}
-        ${it.score ? `<span class="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold">★ ${it.score}</span>` : ''}
+      <div class="poster">
+        ${it.poster
+          ? `<img src="${it.poster}" ${it.posterFull && it.posterFull !== it.poster ? `data-alt="${it.posterFull}"` : ''} loading="lazy" decoding="async" onerror="imgErr(this)">`
+          : '<div class="ph">🎬</div>'}
+        ${it.score ? `<span class="badge">★ ${it.score}</span>` : ''}
       </div>
-      <div class="line-clamp-2 text-xs font-medium leading-tight">${it.title}</div>`;
+      <div class="ctitle">${it.title}</div>`;
     grid.appendChild(b);
   });
 }
@@ -412,16 +472,14 @@ function setTab(name){
   const h = name === 'home';
   $('screen-home').classList.toggle('hidden', !h);
   $('screen-search').classList.toggle('hidden', h);
-  $('tab-home').classList.toggle('text-[#0a84ff]', h);
-  $('tab-home').classList.toggle('text-gray-500', !h);
-  $('tab-search').classList.toggle('text-[#0a84ff]', !h);
-  $('tab-search').classList.toggle('text-gray-500', h);
+  $('tab-home').classList.toggle('on', h);
+  $('tab-search').classList.toggle('on', !h);
   if (!h) setTimeout(() => $('search-input').focus(), 60);
 }
 
 /* ============ ПЛЕЕР ============ */
 async function openPlayer(item){
-  $('player').classList.remove('hidden'); $('player').classList.add('flex');
+  $('player').classList.add('open');
   document.body.style.overflow = 'hidden';
   $('p-title').textContent = item.title;
   $('p-iframe').src = 'about:blank';
@@ -455,7 +513,7 @@ async function openPlayer(item){
   const v = $('p-voices');
   results.forEach((r, i) => {
     const b = document.createElement('button');
-    b.className = 'chipx shrink-0 rounded-full px-3 py-1.5 text-xs' + (i === 0 ? ' on' : '');
+    b.className = 'voice' + (i === 0 ? ' on' : '');
     b.textContent = (r.voice || 'Вариант ' + (i+1)) + (r.quality ? ' · ' + r.quality : '');
     b.onclick = () => { v.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on'); setPlayer(r); };
     v.appendChild(b);
@@ -470,7 +528,7 @@ function setPlayer(r){
   $('p-meta').textContent = [r.kind, r.year, r.quality, r.voice ? '🎙 ' + r.voice : '', r.score ? '★ ' + r.score : ''].filter(Boolean).join(' · ');
 }
 function closePlayer(){
-  $('player').classList.add('hidden'); $('player').classList.remove('flex');
+  $('player').classList.remove('open');
   $('p-iframe').src = 'about:blank';
   document.body.style.overflow = '';
 }
@@ -500,9 +558,8 @@ $('search-input').addEventListener('input', e => {
   searchTimer = setTimeout(() => doSearch(q), 350);
 });
 
-/* Бесконечная прокрутка: дошли до низа — грузим ещё */
 window.addEventListener('scroll', () => {
-  if (!$('player').classList.contains('hidden')) return;
+  if ($('player').classList.contains('open')) return;
   if (window.innerHeight + window.scrollY < document.body.offsetHeight - 800) return;
   if (!$('screen-home').classList.contains('hidden')) loadHomeMore();
   else loadSearchMore();
