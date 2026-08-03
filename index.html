@@ -11,8 +11,9 @@
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="manifest" id="manifest-link">
 <link rel="preconnect" href="https://shikimori.one" crossorigin>
-<link rel="preconnect" href="https://api.allorigins.win">
-<link rel="dns-prefetch" href="https://kodik-api.com">
+<link rel="preconnect" href="https://api.allorigins.win" crossorigin>
+<link rel="preconnect" href="https://corsproxy.io" crossorigin>
+<link rel="preconnect" href="https://api.codetabs.com" crossorigin>
 <style>
 :root{--bg:#0b0b0f;--card:#17171c;--blue:#0a84ff;--mut:#98989f}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -38,11 +39,13 @@ img{display:block}
 .ph{width:100%;height:100%;display:grid;place-items:center;font-size:10px;color:#565661}
 .badge{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700}
 .ctitle{font-size:12px;font-weight:500;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.loader{display:flex;flex-direction:column;align-items:center;gap:8px;padding:64px 0;color:var(--mut);font-size:12px}
+.skel{aspect-ratio:2/3;border-radius:10px;background:linear-gradient(100deg,#17171c 40%,#23232c 50%,#17171c 60%);background-size:200% 100%;animation:sh 1.1s infinite}
+.skel-line{height:12px;margin-top:6px;border-radius:4px;aspect-ratio:auto}
+@keyframes sh{to{background-position:-200% 0}}
+.more{display:flex;justify-content:center;align-items:center;gap:8px;padding:24px 0;color:var(--mut);font-size:12px}
 .spin{width:32px;height:32px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:var(--blue);animation:sp .8s linear infinite}
 .spin.small{width:16px;height:16px;border-width:2px}
 @keyframes sp{to{transform:rotate(1turn)}}
-.more{display:flex;justify-content:center;align-items:center;gap:8px;padding:24px 0;color:var(--mut);font-size:12px}
 .empty{text-align:center;color:var(--mut);font-size:14px;padding:64px 0}
 .search{width:100%;margin-top:10px;background:rgba(255,255,255,.1);border:0;border-radius:12px;padding:12px 16px;color:#fff;font-size:15px;outline:none;box-shadow:0 0 0 2px transparent}
 .search:focus{box-shadow:0 0 0 2px var(--blue)}
@@ -92,7 +95,6 @@ img{display:block}
     </div>
   </header>
   <main class="content">
-    <div id="home-loader" class="loader"><div class="spin"></div>Загрузка…</div>
     <div id="home-grid" class="grid"></div>
     <div id="home-more" class="more hidden"><div class="spin small"></div>Ещё…</div>
     <div id="home-empty" class="empty hidden">Ничего не нашлось</div>
@@ -145,7 +147,7 @@ img{display:block}
 <div id="toast" class="toast hidden"></div>
 
 <script>
-/* ============ PWA МАНИФЕСТ С ИКОНКОЙ (icon.png рядом с index.html) ============ */
+/* ============ PWA: манифест + Service Worker ============ */
 (function(){
   const iconUrl = new URL('icon.png', location.href).href;
   const m = { name:'Anime PWA', short_name:'Anime', start_url:'.', display:'standalone',
@@ -153,6 +155,8 @@ img{display:block}
     icons:[{src:iconUrl,sizes:'192x192',type:'image/png',purpose:'any'},{src:iconUrl,sizes:'512x512',type:'image/png'}] };
   document.getElementById('manifest-link').href =
     URL.createObjectURL(new Blob([JSON.stringify(m)], { type:'application/manifest+json' }));
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol))
+    navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
 
 /* ============ КОНФИГ ============ */
@@ -196,27 +200,30 @@ function ensureToken(){
   })();
 }
 
-/* ============ FETCH + ПРОКСИ (быстрый сначала) ============ */
-const PROXIES = [
+/* ============ FETCH: ГОНКА ПРОКСИ (параллельно, быстрый побеждает) ============ */
+const RACE = [
   u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
-  u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
-  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
-  u => u
+  u => 'https://corsproxy.io/?url=' + encodeURIComponent(u)
 ];
-async function fetchJSON(url, timeout = 6000){
-  const chain = OWN_PROXY ? [u => OWN_PROXY + encodeURIComponent(u), ...PROXIES] : PROXIES;
-  let err;
-  for (const wrap of chain){
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), timeout);
-    try{
-      const r = await fetch(wrap(url), { signal: ctrl.signal });
-      clearTimeout(t);
-      if (!r.ok){ err = new Error('HTTP ' + r.status); continue; }
-      return JSON.parse(await r.text());
-    }catch(e){ clearTimeout(t); err = e; }
-  }
-  throw err || new Error('fetch failed');
+const FALLBACK = [
+  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)
+];
+const anyP = Promise.any ? Promise.any.bind(Promise) : ps => new Promise((res, rej) => {
+  let n = 0; ps.forEach(p => p.then(res, () => { if (++n === ps.length) rej(new Error('all failed')); }));
+});
+function via(u, timeout){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeout);
+  return fetch(u, { signal: ctrl.signal })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(txt => { clearTimeout(t); return JSON.parse(txt); })
+    .catch(e => { clearTimeout(t); throw e; });
+}
+async function fetchJSON(url, timeout = 6500){
+  if (OWN_PROXY){ try{ return await via(OWN_PROXY + encodeURIComponent(url), timeout); }catch(e){} }
+  try{ return await anyP(RACE.map(w => via(w(url), timeout))); }catch(e){}
+  for (const w of FALLBACK){ try{ return await via(w(url), timeout); }catch(e){} }
+  throw new Error('proxy failed');
 }
 async function shiki(path, params = {}){
   try{ return await fetchJSON(`${SHIKI}/api/${path}?` + new URLSearchParams(params)); }catch(e){ return null; }
@@ -245,8 +252,6 @@ const normKodik = r => {
     voice: (r.translation && r.translation.title) || null, quality: r.quality || null,
     kodikLink: r.link };
 };
-
-/* Картинки: фолбэк preview -> original -> заглушка (картинки будут всегда) */
 function imgErr(im){
   const alt = im.getAttribute('data-alt');
   if (alt && im.src !== alt){ im.removeAttribute('data-alt'); im.src = alt; return; }
@@ -269,21 +274,17 @@ const SECTIONS = {
              kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true'} }
 };
 
-/* ============ ХРАНИЛИЩЕ (мгновенный старт) ============ */
+/* ============ ХРАНИЛИЩЕ ============ */
 const LS = {
   get(k){ try{ return JSON.parse(localStorage.getItem('anime_' + k)); }catch(e){ return null; } },
   set(k,v){ try{ localStorage.setItem('anime_' + k, JSON.stringify(v)); }catch(e){} }
 };
 const $ = id => document.getElementById(id);
 const freshState = () => ({ items:[], keys:new Set(), page:1, nextUrl:null, done:false, source:null, rendered:0, loading:false });
+const saveState = (key, f) => LS.set(key, { t:Date.now(), items:f.items.slice(0,CAP), page:f.page, nextUrl:f.nextUrl, done:f.done, source:f.source });
 
 const home = { sec:'popular' };
 let homeState = null, homeReq = 0;
-
-function persistHome(){
-  const f = homeState; if (!f || !f.items.length) return;
-  LS.set('sec_' + home.sec, { t:Date.now(), items:f.items.slice(0,CAP), page:f.page, nextUrl:f.nextUrl, done:f.done, source:f.source });
-}
 
 async function loadHome(sec){
   const my = ++homeReq;
@@ -293,35 +294,35 @@ async function loadHome(sec){
     homeState = { ...freshState(), items:cached.items,
       keys:new Set(cached.items.map(i => i.sid || i.title)),
       page:cached.page || 1, nextUrl:cached.nextUrl || null, done:!!cached.done, source:cached.source || null };
-    homeLoading(false);
     $('home-grid').innerHTML = '';
-    appendCards($('home-grid'), homeState.items);
+    appendCards($('home-grid'), homeState.items, 0);
     homeState.rendered = homeState.items.length;
     $('home-empty').classList.add('hidden');
-    if (Date.now() - (cached.t || 0) < TTL) return;   // свежий кеш — сеть не трогаем
-    refreshHome(sec, my);                              // старый кеш — обновим в фоне
+    if (Date.now() - (cached.t || 0) < TTL) return;
+    refreshHome(sec, my);
     return;
   }
   homeState = freshState();
-  homeLoading(true);
+  skeleton($('home-grid'));
   await fetchChunk(homeState, sec);
   if (my !== homeReq) return;
-  homeLoading(false);
-  appendCards($('home-grid'), homeState.items);
+  $('home-grid').innerHTML = '';
+  appendCards($('home-grid'), homeState.items, 0);
   homeState.rendered = homeState.items.length;
   $('home-empty').classList.toggle('hidden', homeState.items.length > 0);
-  persistHome();
+  if (homeState.items.length) saveState('sec_' + sec, homeState);
+  idlePrefetch();
 }
 
 async function refreshHome(sec, my){
   const f = freshState();
   await fetchChunk(f, sec);
-  if (f.items.length) LS.set('sec_' + sec, { t:Date.now(), items:f.items.slice(0,CAP), page:f.page, nextUrl:f.nextUrl, done:f.done, source:f.source });
+  if (f.items.length) saveState('sec_' + sec, f);
   if (my !== homeReq) return;
   if (window.scrollY < 400 && homeState.rendered === homeState.items.length && f.items.length){
     homeState = f;
     $('home-grid').innerHTML = '';
-    appendCards($('home-grid'), f.items);
+    appendCards($('home-grid'), f.items, 0);
     f.rendered = f.items.length;
   }
 }
@@ -366,42 +367,65 @@ async function loadHomeMore(){
   const f = homeState;
   if (!f || f.loading || f.done) return;
   const my = homeReq;
+  const old = f.rendered;
   await fetchChunk(f, home.sec);
   if (my !== homeReq) return;
-  appendCards($('home-grid'), f.items.slice(f.rendered));
+  appendCards($('home-grid'), f.items.slice(old), old);
   f.rendered = f.items.length;
-  persistHome();
+  saveState('sec_' + home.sec, f);
 }
 
-/* ============ ПОИСК ============ */
+/* Фоновый предзагруз секций в idle-время */
+const prefetched = {};
+function idle(fn){ ('requestIdleCallback' in window) ? requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 1500); }
+function idlePrefetch(){
+  idle(() => { prefetchSec('ongoing'); prefetchSec('top'); });
+}
+function prefetchSec(sec){
+  if (prefetched[sec]) return; prefetched[sec] = 1;
+  const c = LS.get('sec_' + sec);
+  if (c && Date.now() - (c.t || 0) < TTL) return;
+  const f = freshState();
+  fetchChunk(f, sec).then(() => { if (f.items.length) saveState('sec_' + sec, f); });
+}
+
+/* ============ ПОИСК (с кешем последнего запроса) ============ */
 let searchState = null, searchReq = 0, searchCache = null, searchTimer;
+
+function restoreSearch(f){
+  searchState = { ...freshState(), q:f.q, items:f.items, keys:new Set(f.items.map(i => i.sid || i.title)),
+    page:f.page || 1, nextUrl:f.nextUrl || null, done:!!f.done, source:f.source || null };
+  $('search-grid').innerHTML = '';
+  appendCards($('search-grid'), searchState.items, 0);
+  searchState.rendered = searchState.items.length;
+  $('search-hint').classList.add('hidden');
+  $('search-empty').classList.add('hidden');
+  searchStatus(null);
+}
 
 async function doSearch(q, append = false){
   const my = ++searchReq;
   if (!append){
-    if (searchCache && searchCache.q === q && searchCache.items.length){
-      searchState = searchCache;
-      $('search-grid').innerHTML = '';
-      appendCards($('search-grid'), searchCache.items);
-      searchCache.rendered = searchCache.items.length;
-      $('search-hint').classList.add('hidden');
-      $('search-empty').classList.add('hidden');
-      searchStatus(null);
-      return;
+    if (searchCache && searchCache.q === q && searchCache.items.length){ restoreSearch(searchCache); return; }
+    const ls = LS.get('q');
+    if (ls && ls.q === q && ls.items && ls.items.length && Date.now() - (ls.t || 0) < TTL){
+      searchCache = ls; restoreSearch(ls); return;
     }
     searchState = { q, ...freshState() };
     $('search-hint').classList.add('hidden');
     $('search-empty').classList.add('hidden');
-    $('search-grid').innerHTML = '';
+    skeleton($('search-grid'), 6);
     searchStatus('Ищем «' + q + '»…');
   }
   await fetchSearchChunk(q);
   if (my !== searchReq) return;
   searchStatus(null);
-  appendCards($('search-grid'), searchState.items.slice(searchState.rendered));
+  const old = searchState.rendered;
+  if (!append) $('search-grid').innerHTML = '';
+  appendCards($('search-grid'), searchState.items.slice(append ? old : 0), append ? old : 0);
   searchState.rendered = searchState.items.length;
   $('search-empty').classList.toggle('hidden', searchState.items.length > 0);
-  if (searchState.items.length) searchCache = searchState;
+  if (searchState.items.length){ searchCache = searchState; LS.set('q', { t:Date.now(), q, items:searchState.items.slice(0,90), page:searchState.page, done:searchState.done, source:searchState.source }); }
 }
 
 async function fetchSearchChunk(q){
@@ -435,31 +459,35 @@ async function loadSearchMore(){
   const f = searchState;
   if (!f || f.loading || f.done) return;
   if ($('search-input').value.trim() !== f.q) return;
-  const my = searchReq;
+  const my = searchReq, old = f.rendered;
   await fetchSearchChunk(f.q);
   if (my !== searchReq) return;
-  appendCards($('search-grid'), f.items.slice(f.rendered));
+  appendCards($('search-grid'), f.items.slice(old), old);
   f.rendered = f.items.length;
 }
 
 /* ============ UI ============ */
 function toast(m){ const el = $('toast'); el.textContent = m; el.classList.remove('hidden');
   clearTimeout(el._t); el._t = setTimeout(() => el.classList.add('hidden'), 2500); }
-function homeLoading(v){ $('home-loader').classList.toggle('hidden', !v);
-  if (v){ $('home-grid').innerHTML = ''; $('home-empty').classList.add('hidden'); } }
 function searchStatus(msg){ const el = $('search-status');
   el.classList.toggle('hidden', !msg);
   if (msg) $('search-status-text').textContent = msg; }
+function skeleton(grid, n = 12){
+  let h = '';
+  for (let i = 0; i < n; i++) h += '<div><div class="skel"></div><div class="skel skel-line"></div></div>';
+  grid.innerHTML = h;
+}
 
-function appendCards(grid, arr){
-  arr.forEach(it => {
+function appendCards(grid, arr, startIdx){
+  arr.forEach((it, i) => {
     const b = document.createElement('button');
     b.className = 'card';
     b.onclick = () => openPlayer(it);
+    const hi = (startIdx + i) < 9 ? ' fetchpriority="high"' : '';
     b.innerHTML = `
       <div class="poster">
         ${it.poster
-          ? `<img src="${it.poster}" ${it.posterFull && it.posterFull !== it.poster ? `data-alt="${it.posterFull}"` : ''} loading="lazy" decoding="async" onerror="imgErr(this)">`
+          ? `<img src="${it.poster}" ${it.posterFull && it.posterFull !== it.poster ? `data-alt="${it.posterFull}"` : ''} loading="lazy" decoding="async"${hi} onerror="imgErr(this)">`
           : '<div class="ph">🎬</div>'}
         ${it.score ? `<span class="badge">★ ${it.score}</span>` : ''}
       </div>
