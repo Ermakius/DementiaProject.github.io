@@ -1212,8 +1212,8 @@ function resetWatchState(it){
   const p = progress[it.key];
   const target = (settings.resume && p && p.t > 25 && (!p.d || p.t < p.d - 20)) ? p.t : 0;
   watching = {
-    lastT: null, lastTs: 0, cur: 0, dur: p && p.d ? p.d : 0, ep: p && p.ep ? p.ep : null, season: null,
-    playing: false, started: false,
+    lastT: null, lastTs: 0, cur: 0, dur: p && p.d ? p.d : 0, ep: it._ep || (p && p.ep ? p.ep : null), season: null,
+    playing: false, started: false, tr: '', voice: null,
     resumeTarget: target, resumeTriedAt: 0, resumeAttempts: 0, resumeDone: !target
   };
   skipArmed = settings.skip && !target && it.kind !== 'Фильм';
@@ -1275,13 +1275,25 @@ function onVideoEnded(){
 
 function onEpisode(v){
   if (!v || typeof v !== 'object') return;
-  if (v.episode != null) watching.ep = v.episode;
+  // сразу после переключения серии старый плеер ещё может прислать свою — игнорируем
+  if (v.episode != null && (party.host || Date.now() >= (party.epGuardUntil || 0))) watching.ep = v.episode;
   if (v.season != null) watching.season = v.season;
+  if (v.translation && v.translation.title) watching.tr = v.translation.title;
   if (current){
     progress[current.key] = { t: watching.cur || 0, d: watching.dur || 0, ep: watching.ep, ts: Date.now() };
     LS.set('pos', progress);
   }
-  if (party.on) partySend({ k: 'ep', ep: watching.ep, season: watching.season });
+  // серию объявляет только хост — иначе гости начнут переключать друг друга
+  if (party.on && party.host){
+    partySend({
+      k: 'ep',
+      ep: watching.ep,
+      season: watching.season,
+      t: Math.round(watching.cur || 0),
+      titleKey: current ? current.key : '',
+      translation: watching.tr || ''
+    });
+  }
 }
 
 function onPlayerTime(t){
@@ -1358,6 +1370,7 @@ async function openPlayer(it){
   pushPlayerState();
   resetWatchState(it);
   renderResumeRow(it);
+  hideRelated();
 
   $('p-shiki').href = it.sid ? 'https://shikimori.one/animes/' + it.sid : 'https://shikimori.one';
   $('p-mal').href = 'https://myanimelist.net/search/all?q=' + encodeURIComponent(it.orig || it.title);
@@ -1368,6 +1381,7 @@ async function openPlayer(it){
   addHistory(it);
   addToWatching(it);
   trackOpen(it);
+  loadRelated(it);
 
   if (!it.voices || !it.voices.length){
     $('p-loader').classList.remove('hidden');
@@ -1427,11 +1441,55 @@ function playItem(it){
     $('p-open').href = '#';
     return;
   }
-  play(it.voices[0]);
+  play(it.voices[0], it._ep);
 }
 
-function play(voice){
-  const url = absUrl(voice.link);
+/* Плеер понимает ?episode=N — на этом держится переключение серии в комнате */
+function withEpisode(url, ep){
+  if (ep == null || ep === '') return url;
+  try{
+    const u = new URL(url);
+    u.searchParams.set('episode', String(ep));
+    return u.toString();
+  }catch(e){
+    return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'episode=' + encodeURIComponent(ep);
+  }
+}
+
+function switchEpisode(ep, target, translationTitle){
+  if (!current) return;
+  const voices = current.voices || [];
+  if (!voices.length) return;
+  let voice = voices[0];
+  if (translationTitle){
+    const nt = normText(translationTitle);
+    const found = voices.find(v => normText(v.translation) === nt);
+    if (found) voice = found;
+  }
+  watching.ep = ep;
+  watching.lastT = null;
+  watching.lastTs = 0;
+  watching.cur = 0;
+  watching.dur = 0;
+  watching.resumeTarget = Math.max(0, target || 0);
+  watching.resumeTriedAt = 0;
+  watching.resumeAttempts = 0;
+  watching.resumeDone = !(target > 20);
+  watching.playing = false;
+  watching.started = false;
+  party.epGuardUntil = Date.now() + 6000;
+  party.lastEpTarget = Number(ep) || 0;
+  party.lastEpAt = Date.now();
+  skipArmed = false;
+  skipDone = true;          // при переключении серии опенинг не проматываем
+  $('p-skip').classList.add('hidden');
+  play(voice, ep);
+}
+
+function play(voice, episode){
+  watching.voice = voice || null;
+  if (voice && voice.translation) watching.tr = voice.translation;
+  const url = withEpisode(absUrl(voice.link), episode);
   if (!url){ showPlayError(); return; }
   $('p-error').classList.add('hidden');
   $('p-loader').classList.remove('hidden');
@@ -1513,6 +1571,7 @@ function closePlayer(){
   $('p-iframe').src = 'about:blank';
   document.body.style.overflow = '';
   clearTimeout(loadTimer);
+  hideRelated();
   current = null;
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   renderHistoryRow();
@@ -1784,7 +1843,8 @@ function resetAll(){
 const party = {
   on: false, code: '', host: false, name: '',
   es: null, myId: Math.random().toString(36).slice(2, 10),
-  members: new Map(), lastPublish: 0, titleKey: '', joining: false
+  members: new Map(), lastPublish: 0, titleKey: '', joining: false,
+  epGuardUntil: 0, lastEpTarget: 0, lastEpAt: 0
 };
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1810,6 +1870,32 @@ function partySend(payload){
   partyPublish(payload);
 }
 
+/* Что хост отдаёт гостю при открытии тайтла: ссылка, серия и позиция */
+function partyOpenPayload(){
+  if (!current) return null;
+  const v = watching.voice || (current.voices && current.voices[0]);
+  return {
+    k: 'open',
+    item: slim(current),
+    voiceLink: v ? v.link : '',
+    ep: watching.ep || null,
+    t: Math.round(watching.cur || 0),
+    translation: watching.tr || ''
+  };
+}
+
+/* Гость повторяет переключение серии за хостом */
+function partyAdoptEpisode(ep, target, translation){
+  ep = Number(ep) || 0;
+  if (!ep || !current) return false;
+  if (Number(watching.ep) === ep && Date.now() >= (party.epGuardUntil || 0)) return false;
+  if (party.lastEpTarget === ep && Date.now() - party.lastEpAt < 60000) return false;
+  partyChatLine('', 'Хост переключил на серию ' + ep, true);
+  toast('Серия ' + ep);
+  switchEpisode(ep, Math.max(0, Number(target) || 0), translation || '');
+  return true;
+}
+
 function partySyncPublish(){
   if (!party.on || !party.host || !current) return;
   party.lastPublish = 0;
@@ -1819,7 +1905,8 @@ function partySyncPublish(){
     d: Math.round(watching.dur || 0),
     ep: watching.ep,
     paused: !watching.playing,
-    titleKey: current.key
+    titleKey: current.key,
+    translation: watching.tr || ''
   });
 }
 
@@ -1830,7 +1917,8 @@ function partyOnTime(t){
   party.lastPublish = now;
   partyPublish({
     k: 'tick', t: Math.round(t), d: Math.round(watching.dur || 0),
-    ep: watching.ep, paused: false, titleKey: current ? current.key : ''
+    ep: watching.ep, paused: false, titleKey: current ? current.key : '',
+    translation: watching.tr || ''
   });
 }
 
@@ -1900,11 +1988,10 @@ function partyJoin(code, asHost){
   partyPublish({ k: 'join' });
   if (asHost){
     partyPublish({ k: 'hi' });
-    if (current) setTimeout(() => partyPublish({
-      k: 'open',
-      item: slim(current),
-      voiceLink: current.voices && current.voices[0] ? current.voices[0].link : ''
-    }), 400);
+    if (current) setTimeout(() => {
+      const p = partyOpenPayload();
+      if (p) partyPublish(p);
+    }, 400);
   }else{
     setTimeout(askPartyState, 500);
   }
@@ -1949,11 +2036,10 @@ function partyHandle(env){
     case 'join':
       partyChatLine('', (m.name || 'Кто-то') + ' присоединился', true);
       partyPublish({ k: 'hi' });
-      if (party.host && current) partyPublish({
-        k: 'open',
-        item: slim(current),
-        voiceLink: current.voices && current.voices[0] ? current.voices[0].link : ''
-      });
+      if (party.host){
+        const p = partyOpenPayload();
+        if (p) partyPublish(p);
+      }
       break;
 
     case 'hi':
@@ -1966,13 +2052,18 @@ function partyHandle(env){
 
     case 'open': {
       if (!m.item || party.host) break;
-      if (!current || current.key !== m.item.key){
-        const it = m.item;
-        it.voices = m.voiceLink ? [{ link: m.voiceLink, translation: 'Комната', quality: '' }] : [];
-        party.titleKey = it.key;
-        partyChatLine('', 'Хост включил: ' + it.title, true);
-        openPlayer(it);
+      const ep = Number(m.ep) || 0;
+      if (current && current.key === m.item.key){
+        // тот же тайтл — просто догоняем серию
+        if (ep && ep !== Number(watching.ep)) partyAdoptEpisode(ep, m.t, m.translation);
+        break;
       }
+      const it = m.item;
+      it.voices = m.voiceLink ? [{ link: m.voiceLink, translation: m.translation || 'Комната', quality: '' }] : [];
+      if (ep) it._ep = ep;
+      party.titleKey = it.key;
+      partyChatLine('', 'Хост включил: ' + it.title + (ep ? ' · серия ' + ep : ''), true);
+      openPlayer(it);
       break;
     }
 
@@ -1981,6 +2072,13 @@ function partyHandle(env){
       party.titleKey = m.titleKey || party.titleKey;
       if (!current) break;
       if (m.titleKey && current.key !== m.titleKey) break;
+
+      // серия поменялась — перезагружаем плеер гостя на нужную
+      if (m.ep != null && Number(m.ep) !== Number(watching.ep)){
+        const age0 = Math.max(0, (Date.now() - at) / 1000);
+        const t0 = (m.t || 0) + (m.paused ? 0 : Math.min(age0, 30));
+        if (partyAdoptEpisode(m.ep, t0, m.translation)) break;
+      }
 
       const age = Math.max(0, (Date.now() - at) / 1000);
       const target = (m.t || 0) + (m.paused ? 0 : Math.min(age, 30));
@@ -2007,12 +2105,14 @@ function partyHandle(env){
       if (party.host){ party.lastPublish = 0; partySyncPublish(); }
       break;
 
-    case 'ep':
-      if (!party.host && m.ep != null && watching.ep != null && m.ep !== watching.ep){
-        partyChatLine('', 'Хост переключил на серию ' + m.ep + ' — выберите её в плеере', true);
-        toast('Хост смотрит серию ' + m.ep);
-      }
+    case 'ep': {
+      if (party.host || !current) break;
+      if (m.titleKey && current.key !== m.titleKey) break;
+      const age = Math.max(0, (Date.now() - at) / 1000);
+      const target = (m.t || 0) + Math.min(age, 30);
+      partyAdoptEpisode(m.ep, target, m.translation);
       break;
+    }
 
     case 'bye':
       partyChatLine('', (m.name || 'Кто-то') + ' вышел', true);
@@ -2023,6 +2123,334 @@ function partyHandle(env){
 function updatePeople(){
   const el = $('party-people');
   if (el) el.textContent = partyMembersText();
+}
+
+/* ============================================================
+   СВЯЗАННЫЕ ТАЙТЛЫ (Kodik + AniList)
+   ============================================================ */
+const REL_BADGE = {
+  SEQUEL:'Продолжение', PREQUEL:'Приквел', PARENT:'Основной', ALTERNATIVE:'Альтернатива',
+  SIDE_STORY:'Спин-офф', SPIN_OFF:'Спин-офф', SUMMARY:'Пересказ', CHARACTER:'Тот же мир',
+  ADAPTATION:'Адаптация', SOURCE:'Исходник', OTHER:'Связанное'
+};
+const REL_ORDER = ['SEQUEL','PREQUEL','PARENT','ALTERNATIVE','SIDE_STORY','SPIN_OFF','SUMMARY','CHARACTER','ADAPTATION','SOURCE','OTHER'];
+const KIND_ORDER = ['ТВ-сериал','Сериал','ONA','Спешл','OVA','Фильм'];
+
+const related = { key:'', items: [], req: 0, cache: new Map() };
+
+/* «Наруто [ТВ-2]» → «наруто», «Sousou no Frieren (2026)» → «sousou no frieren» */
+function baseTitle(t){
+  let s = String(t || '').trim();
+  s = s.replace(/\s*[\[(][^\])]*[\])]\s*$/g, ' ');
+  s = s.replace(/\s*:.*$/, ' ');
+  s = s.replace(/\b(сезон|season|часть|part)\s*[-–]?\s*\d+\b/gi, ' ');
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+/* База для поиска «своих»: ромадзи надёжнее русского названия */
+function relBase(it){
+  const src = it.orig || it.title || '';
+  let b = baseTitle(src);
+  if (normText(b).length < 3) b = baseTitle(it.title || '') || it.title || '';
+  return b;
+}
+
+function foldText(s){
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ё/g, 'е');
+}
+
+function tokensOf(s){
+  return new Set(foldText(s).replace(/[^a-zа-я0-9]+/g, ' ').split(' ').filter(w => w.length > 2));
+}
+
+const REL_STOP = new Set(['the','and','for','movie','film','gekijouban','gekijoban','gekijo','ban',
+  'ova','special','season','part','chapter','story','tales','spin','off']);
+
+function relTokens(s){
+  const t = tokensOf(s);
+  REL_STOP.forEach(w => t.delete(w));
+  return t;
+}
+
+function diceOf(a, b){
+  if (!a.size || !b.size) return 0;
+  let n = 0;
+  a.forEach(w => { if (b.has(w)) n++; });
+  return (2 * n) / (a.size + b.size);
+}
+
+function kindFamily(kind){
+  if (kind === 'ТВ-сериал' || kind === 'Сериал') return 'tv';
+  if (kind === 'Фильм') return 'movie';
+  if (kind === 'OVA') return 'ova';
+  if (kind === 'ONA') return 'ona';
+  if (kind === 'Спешл') return 'special';
+  return '';
+}
+
+function formatFamily(f){
+  return { TV:'tv', TV_SHORT:'tv', MOVIE:'movie', OVA:'ova', ONA:'ona', SPECIAL:'special', MUSIC:'' }[f] || '';
+}
+
+/* Поиск всех релизов той же франшизы в Kodik */
+async function kodikSiblings(it){
+  const q = it.orig || it.title;
+  if (!q) return [];
+  let data = await api('search', { title: q, limit: 100, types: 'anime,anime-serial', with_material_data: 'true' });
+  let groups = groupResults(data && data.results);
+  if (groups.length < 2 && it.title && it.title !== q){
+    data = await api('search', { title: it.title, limit: 100, types: 'anime,anime-serial', with_material_data: 'true' });
+    groups = groupResults(data && data.results);
+  }
+  const base = relBase(it);
+  const nb = normText(base);
+  const bt = relTokens(base);
+  const own = groups.filter(g => g.key !== it.key && g.voices.length);
+  if (!nb) return own.slice(0, 40);
+
+  const strict = own.filter(g => (normText(g.title) + ' ' + normText(g.orig)).includes(nb));
+  if (strict.length >= 3) return strict.slice(0, 40);
+
+  // продолжения ищутся иначе («Naruto Shippuuden» → ищем по слову «Naruto»)
+  let loose = [];
+  if (bt.size){
+    loose = own.filter(g => {
+      const gt = tokensOf(g.title + ' ' + g.orig);
+      for (const w of bt) if (gt.has(w)) return true;
+      return false;
+    });
+  }
+  const out = loose.length >= strict.length ? loose : strict;
+  return out.slice(0, 40);
+}
+
+const ANILIST_SEARCH = 'query($s:String){Page(perPage:10){media(search:$s,type:ANIME){id seasonYear format title{romaji english native}}}}';
+const ANILIST_REL = 'query($id:Int){Media(id:$id,type:ANIME){id relations{edges{relationType(version:2) node{id type format episodes seasonYear title{romaji english native}}}}}}';
+
+async function gql(query, variables){
+  const ctrl = new AbortController();
+  const tm = setTimeout(() => ctrl.abort(), 8000);
+  try{
+    const r = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables }),
+      signal: ctrl.signal
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && j.data ? j.data : null;
+  }catch(e){
+    return null;
+  }finally{
+    clearTimeout(tm);
+  }
+}
+
+async function aniListRelations(it){
+  const cands = uniq([it.orig, baseTitle(it.orig || ''), it.alt, it.title]
+    .map(s => String(s || '').trim()).filter(s => s.length > 2));
+  const target = tokensOf([it.orig, it.alt, it.title].filter(Boolean).join(' '));
+  const year = Number(it.year) || 0;
+
+  for (const c of cands.slice(0, 3)){
+    const data = await gql(ANILIST_SEARCH, { s: c });
+    const media = (data && data.Page && data.Page.media) || [];
+    if (!media.length) continue;
+
+    let best = null, bestSc = -9;
+    for (const m of media){
+      const mt = tokensOf([m.title.romaji, m.title.english, m.title.native].filter(Boolean).join(' '));
+      let sc = diceOf(target, mt) * 2;
+      const my = Number(m.seasonYear) || 0;
+      if (year && my){
+        const d = Math.abs(year - my);
+        sc += d === 0 ? 1 : d <= 1 ? 0.3 : -0.4;
+      }
+      const mf = formatFamily(m.format), kf = kindFamily(it.kind);
+      if (mf && kf) sc += mf === kf ? 0.6 : -0.6;
+      if (sc > bestSc){ bestSc = sc; best = m; }
+    }
+    if (!best) continue;
+
+    const rel = await gql(ANILIST_REL, { id: best.id });
+    const edges = rel && rel.Media && rel.Media.relations && rel.Media.relations.edges;
+    if (edges && edges.length) return edges;
+  }
+  return [];
+}
+
+/* Сопоставляем рёбра AniList с релизами Kodik, чтобы подписать «Продолжение», «Спин-офф» и т.д. */
+function mergeRelated(sibs, edges){
+  const pairs = [];
+  (edges || []).forEach((e, ei) => {
+    const n = e && e.node;
+    if (!n || n.type !== 'ANIME' || n.format === 'MUSIC') return;
+    const et = tokensOf([n.title.romaji, n.title.english, n.title.native].filter(Boolean).join(' '));
+    if (!et.size) return;
+    const fam = formatFamily(n.format);
+    const yr = Number(n.seasonYear) || 0;
+    sibs.forEach((g, i) => {
+      let sc = Math.max(diceOf(et, tokensOf(g.orig)), diceOf(et, tokensOf(g.title)));
+      if (sc < 0.3) return;
+      const gy = Number(g.year) || 0;
+      if (yr && gy){
+        const d = Math.abs(yr - gy);
+        sc += d === 0 ? 0.35 : d <= 1 ? 0.12 : d <= 2 ? 0 : -0.25;
+      }
+      const gf = kindFamily(g.kind);
+      if (fam && gf) sc += fam === gf ? 0.15 : -0.5;
+      if (sc >= 0.55) pairs.push({ i, ei, rel: e.relationType || 'OTHER', sc });
+    });
+  });
+  pairs.sort((a, b) => b.sc - a.sc);
+  const relOf = new Map(), usedEdge = new Set();
+  for (const p of pairs){
+    if (relOf.has(p.i) || usedEdge.has(p.ei)) continue;
+    relOf.set(p.i, p.rel);
+    usedEdge.add(p.ei);
+  }
+
+  const items = sibs.map((g, i) => {
+    const rel = relOf.get(i) || '';
+    return {
+      key: g.key, title: g.title, poster: g.poster, posterAlt: g.posterAlt,
+      year: g.year, episodes: g.episodes, kind: g.kind, rating: g.rating,
+      rel,
+      label: rel ? (REL_BADGE[rel] || 'Связанное')
+                 : [g.kind, g.year ? String(g.year) : ''].filter(Boolean).join(' · '),
+      item: g
+    };
+  });
+
+  const relRank = x => { const i = REL_ORDER.indexOf(x.rel); return x.rel ? i : 50; };
+  const kindRank = x => { const i = KIND_ORDER.indexOf(x.kind); return i < 0 ? 9 : i; };
+  items.sort((a, b) =>
+    relRank(a) - relRank(b) ||
+    kindRank(a) - kindRank(b) ||
+    (Number(a.year) || 9999) - (Number(b.year) || 9999));
+  return items.slice(0, 20);
+}
+
+function relCard(it){
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'card rel-card';
+
+  const poster = document.createElement('div');
+  poster.className = 'poster';
+  if (it.poster){
+    const img = document.createElement('img');
+    img.src = it.poster;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    if (it.posterAlt) img.dataset.alt = it.posterAlt;
+    img.addEventListener('error', () => imgErr(img));
+    poster.appendChild(img);
+  }else{
+    const ph = document.createElement('div');
+    ph.className = 'ph';
+    ph.textContent = '🎬';
+    poster.appendChild(ph);
+  }
+  if (it.label){
+    const badge = document.createElement('span');
+    badge.className = 'rel-badge';
+    badge.textContent = it.label;
+    poster.appendChild(badge);
+  }
+  b.appendChild(poster);
+
+  const t = document.createElement('div');
+  t.className = 'ctitle';
+  t.textContent = it.title;
+  b.appendChild(t);
+
+  b.addEventListener('click', () => openRelated(it));
+  return b;
+}
+
+function renderRelated(){
+  const sec = $('p-related-sec'), row = $('p-related');
+  if (!sec || !row) return;
+  row.innerHTML = '';
+  if (!related.items.length){ sec.classList.add('hidden'); return; }
+  const frag = document.createDocumentFragment();
+  related.items.forEach(it => frag.appendChild(relCard(it)));
+  row.appendChild(frag);
+  const note = $('p-related-note');
+  if (note) note.textContent = 'сезоны · фильмы · спешлы';
+  sec.classList.remove('hidden');
+}
+
+function renderRelSkeleton(){
+  const sec = $('p-related-sec'), row = $('p-related');
+  if (!sec || !row) return;
+  row.innerHTML = '';
+  for (let i = 0; i < 5; i++){
+    const d = document.createElement('div');
+    d.className = 'rel-skel';
+    d.innerHTML = '<div class="skel"></div><div class="skel skel-line"></div>';
+    row.appendChild(d);
+  }
+  const note = $('p-related-note');
+  if (note) note.textContent = '';
+  sec.classList.remove('hidden');
+}
+
+function hideRelated(){
+  related.req++;
+  related.key = '';
+  related.items = [];
+  const sec = $('p-related-sec'), row = $('p-related');
+  if (sec) sec.classList.add('hidden');
+  if (row) row.innerHTML = '';
+}
+
+function openRelated(it){
+  if (!it || !it.item) return;
+  openPlayer(Object.assign({}, it.item));
+}
+
+async function loadRelated(it){
+  if (!it || !it.key || !$('p-related')) return;
+  const req = ++related.req;
+  related.key = it.key;
+  related.items = [];
+
+  const cached = related.cache.get(it.key);
+  if (cached && cached.length){
+    related.items = cached;
+    renderRelated();
+    return;
+  }
+
+  renderRelSkeleton();
+  let sibs = [];
+  try{ sibs = await kodikSiblings(it); }catch(e){}
+  if (req !== related.req) return;
+
+  let edges = [];
+  if (sibs.length){
+    try{ edges = await aniListRelations(it); }catch(e){}
+    if (req !== related.req) return;
+  }
+
+  related.items = mergeRelated(sibs, edges);
+  if (related.items.length) related.cache.set(it.key, related.items);
+  if (req !== related.req) return;
+  if (related.items.length){
+    // кэш ограничиваем, чтобы не копить память
+    if (related.cache.size > 60){
+      const first = related.cache.keys().next();
+      if (!first.done) related.cache.delete(first.value);
+    }
+    renderRelated();
+  }else{
+    const sec = $('p-related-sec');
+    if (sec) sec.classList.add('hidden');
+  }
 }
 
 /* ============================================================
@@ -2151,7 +2579,8 @@ $('p-party').onclick = () => openSheet('party-sheet');
 
 $('p-retry').onclick = () => {
   if (!current) return;
-  if (current.voices && current.voices.length) play(current.voices[0]);
+  const voice = watching.voice || (current.voices && current.voices[0]);
+  if (voice) play(voice, watching.ep);
 };
 
 $('p-full').onclick = () => {
