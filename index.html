@@ -13,118 +13,7 @@
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="manifest" href="manifest.json">
-<style>
-:root{--bg:#0b0b0f;--card:#17171c;--blue:#0a84ff;--blue-btn:#0a6ad0;--mut:#98989f;--line:rgba(255,255,255,.08)}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:#fff;font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Roboto,Arial,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
-button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-a{color:var(--blue);text-decoration:none}
-img{display:block}
-.hidden{display:none!important}
-.safe-top{padding-top:env(safe-area-inset-top)} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
-
-.top{position:sticky;top:0;z-index:40;padding:12px 16px 8px;background:rgba(15,15,20,.82);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
-.logo-row{display:flex;align-items:center;gap:8px}
-.logo{font-size:24px;font-weight:800;letter-spacing:-.5px}
-.logo-sub{font-size:11px;color:var(--mut)}
-.icon-btn{margin-left:auto;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07);color:#d1d5db;font-size:16px}
-.icon-btn:active{background:rgba(255,255,255,.16)}
-
-.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:none}
-.chips::-webkit-scrollbar{display:none}
-.chip,.sec-chip{flex:0 0 auto;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.07);color:#d1d5db;font-size:14px;font-weight:500;white-space:nowrap;transition:background .15s,color .15s}
-.chip.on,.sec-chip.on{background:var(--blue-btn);color:#fff}
-.chip.ghost{background:transparent;border:1px solid rgba(255,255,255,.18)}
-.chip .cnt{font-size:11px;color:var(--mut);margin-left:4px}
-
-.genre-panel{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 6px;max-height:44vh;overflow-y:auto}
-.genre-panel .chip{padding:7px 13px;font-size:13px}
-
-.content{padding:16px 16px 96px}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.card{text-align:left;transition:transform .1s}
-.card:active{transform:scale(.95)}
-.poster{position:relative;aspect-ratio:2/3;border-radius:10px;overflow:hidden;background:var(--card);margin-bottom:6px;content-visibility:auto;contain-intrinsic-size:0 180px}
-.poster img{width:100%;height:100%;object-fit:cover}
-.ph{width:100%;height:100%;display:grid;place-items:center;font-size:22px;color:#565661}
-.badge{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.72);border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700}
-.badge.new{left:4px;right:auto;background:var(--blue-btn)}
-.ctitle{font-size:12px;font-weight:500;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.csub{font-size:10px;color:#9a9aa3;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-.skel{aspect-ratio:2/3;border-radius:10px;background:linear-gradient(100deg,#17171c 40%,#23232c 50%,#17171c 60%);background-size:200% 100%;animation:sh 1.1s infinite}
-.skel-line{height:12px;margin-top:6px;border-radius:4px;aspect-ratio:auto}
-@keyframes sh{to{background-position:-200% 0}}
-.more{display:flex;justify-content:center;align-items:center;gap:8px;padding:24px 0;color:var(--mut);font-size:12px;min-height:60px}
-.spin{width:32px;height:32px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:var(--blue);animation:sp .8s linear infinite}
-.spin.small{width:16px;height:16px;border-width:2px}
-@keyframes sp{to{transform:rotate(1turn)}}
-.empty{text-align:center;color:var(--mut);font-size:14px;padding:64px 24px;line-height:1.6}
-.empty .big{font-size:34px;display:block;margin-bottom:10px}
-.search{width:100%;margin-top:10px;background:rgba(255,255,255,.1);border:0;border-radius:12px;padding:12px 44px 12px 16px;color:#fff;font-size:16px;outline:none;box-shadow:0 0 0 2px transparent;-webkit-appearance:none}
-.search:focus{box-shadow:0 0 0 2px var(--blue)}
-.search::placeholder{color:#8f8f99}
-.search::-webkit-search-cancel-button{display:none}
-.search-wrap{position:relative}
-.search-clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#8a8a93}
-.search-clear:active{background:rgba(255,255,255,.1)}
-.status{display:flex;align-items:center;gap:8px;padding:12px 16px;color:var(--mut);font-size:14px}
-
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:rgba(15,15,20,.82);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line)}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;color:#8f8f99}
-.tab svg{width:24px;height:24px}
-.tab span{font-size:10px}
-.tab.on{color:var(--blue)}
-
-.sec-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px}
-.sec-head h2{font-size:15px;font-weight:700;letter-spacing:-.2px}
-.sec-head button{font-size:12px;color:var(--blue);padding:4px}
-.hrow{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:18px;scrollbar-width:none}
-.hrow::-webkit-scrollbar{display:none}
-.hrow .card{flex:0 0 34%;max-width:130px}
-
-.player{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;flex-direction:column}
-.player.open{display:flex}
-.p-head{display:flex;align-items:center;gap:4px;padding:12px;background:rgba(15,15,20,.82);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
-.back{display:flex;align-items:center;gap:2px;color:var(--blue);font-weight:500;padding:8px 6px 8px 0;flex:0 0 auto}
-.back svg{width:20px;height:20px}
-.p-title{flex:1;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.p-icon{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:17px;color:#c7c7cf;flex:0 0 auto}
-.p-icon:active{background:rgba(255,255,255,.1)}
-.p-icon.on{color:#ff375f}
-.p-body{flex:1;overflow-y:auto;padding:16px 16px 64px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.p-body::-webkit-scrollbar{display:none}
-.p-wrap{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
-.p-wrap iframe{width:100%;height:100%;border:0;display:block}
-.p-overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.78);text-align:center;padding:16px}
-.p-overlay .txt{font-size:12px;color:#9ca3af;margin-top:8px}
-.p-err-emoji{font-size:30px;margin-bottom:8px}
-.p-err-title{font-size:14px;color:#d1d5db}
-.p-err-sub{font-size:12px;color:#9a9aa3;margin-top:4px}
-.p-err-sub a{color:var(--blue)}
-.p-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.p-actions a,.p-actions button{font-size:12px;color:#d1d5db;background:rgba(255,255,255,.08);border-radius:999px;padding:7px 14px}
-.voices{display:flex;gap:8px;overflow-x:auto;margin-top:12px;scrollbar-width:none;padding-bottom:2px}
-.voices::-webkit-scrollbar{display:none}
-.voice{flex:0 0 auto;padding:7px 13px;border-radius:999px;background:rgba(255,255,255,.07);font-size:12px;color:#d1d5db;white-space:nowrap}
-.voice.on{background:var(--blue-btn);color:#fff}
-.p-sub{font-size:11px;color:#6b6b74;margin-top:8px;text-transform:uppercase;letter-spacing:.4px}
-.meta{margin-top:10px;font-size:12px;color:#8a8a93;display:flex;gap:6px;flex-wrap:wrap}
-.meta span{background:rgba(255,255,255,.06);padding:4px 9px;border-radius:8px;color:#b9b9c2}
-.genres{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
-.genre{font-size:11px;padding:5px 10px;border-radius:999px;background:rgba(10,132,255,.15);color:#7ab8ff}
-.desc{margin-top:14px;font-size:14px;line-height:1.6;color:#cfcfd6;white-space:pre-line}
-.desc.clamp{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
-.desc-toggle{font-size:12px;color:var(--blue);margin-top:6px;padding:4px 0}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:60;background:rgba(44,44,46,.96);padding:8px 16px;border-radius:999px;font-size:14px;max-width:90%;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.4)}
-
-@media (min-width:900px){
-  .top{padding-left:max(16px,calc((100vw - 1240px)/2));padding-right:max(16px,calc((100vw - 1240px)/2))}
-  .content{max-width:1240px;margin:0 auto}
-  .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
-  .hrow .card{flex:0 0 150px;max-width:150px}
-}
-</style>
+<link rel="stylesheet" href="app.css">
 </head>
 <body>
 
@@ -144,8 +33,8 @@ img{display:block}
     </div>
     <div class="chips" style="padding-top:2px">
       <button id="btn-genres" class="chip ghost">Жанры <span id="genre-label" class="cnt"></span></button>
+      <button id="btn-party-home" class="chip ghost">👥 Смотреть вместе</button>
     </div>
-    <div id="genre-panel" class="genre-panel hidden"></div>
   </header>
   <main class="content">
     <section id="continue-sec" class="hidden">
@@ -163,34 +52,79 @@ img{display:block}
   <header class="top safe-top">
     <div class="logo-row"><h1 class="logo">Поиск</h1><span class="logo-sub">アニメ.</span></div>
     <div class="search-wrap">
-      <input id="search-input" type="search" class="search" placeholder="Название аниме…" autocomplete="off" enterkeyhint="search">
+      <input id="search-input" type="search" class="search" placeholder="Название аниме…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <button id="btn-mic" class="mic-btn hidden" aria-label="Голосовой поиск">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.5a5.5 5.5 0 005.5-5.5V6a5.5 5.5 0 10-11 0v7a5.5 5.5 0 005.5 5.5zm0 0V22m-4 0h8"/></svg>
+      </button>
       <button id="search-clear" class="search-clear hidden" aria-label="Очистить">✕</button>
     </div>
+    <div id="search-note" class="search-note hidden"></div>
   </header>
   <div id="search-status" class="status hidden"><div class="spin small"></div><span id="search-status-text">Ищем…</span></div>
   <main class="content">
-    <div id="search-hint" class="empty"><span class="big">🍥</span>Введите название — например, «Наруто»</div>
+    <div id="search-hint" class="empty"><span class="big">🍥</span>Введите название — например, «Наруто»<br><span class="empty-sub">Понимает опечатки и раскладку: <code>yfhenj</code> → наруто</span></div>
     <div id="search-grid" class="grid"></div>
     <div id="search-more" class="more hidden"><div class="spin small"></div><span>Ещё…</span></div>
-    <div id="search-empty" class="empty hidden"><span class="big">😕</span>Ничего не нашлось<br><span style="font-size:12px">Попробуйте другое название</span></div>
+    <div id="search-empty" class="empty hidden"><span class="big">😕</span>Ничего не нашлось<br><span class="empty-sub">Попробуйте другое название</span></div>
   </main>
 </div>
 
-<!-- ================= МОЁ ================= -->
-<div id="screen-my" class="hidden">
+<!-- ================= ПРОФИЛЬ ================= -->
+<div id="screen-profile" class="hidden">
   <header class="top safe-top">
-    <div class="logo-row"><h1 class="logo">Моё</h1><span class="logo-sub">アニメ.</span></div>
+    <div class="logo-row">
+      <h1 class="logo">Профиль</h1><span class="logo-sub">アニメ.</span>
+      <button id="btn-settings" class="icon-btn" aria-label="Настройки">⚙</button>
+    </div>
   </header>
   <main class="content">
-    <div id="my-fav-sec" class="hidden">
-      <div class="sec-head"><h2>Избранное</h2><button id="fav-clear">Очистить</button></div>
-      <div id="fav-grid" class="grid"></div>
+    <section class="pcard">
+      <div class="pcard-top">
+        <div class="avatar" id="prof-avatar">Г</div>
+        <div class="pcard-info">
+          <div class="pcard-name" id="prof-name">Гость</div>
+          <div class="pcard-rank"><span class="rank-icon" id="prof-rank-icon">🌱</span><span id="prof-rank">Новичок</span></div>
+        </div>
+        <button id="btn-edit-name" class="ghost-btn">Изменить</button>
+      </div>
+      <div class="rank-track"><div class="rank-fill" id="rank-fill"></div></div>
+      <div class="rank-next" id="rank-next">До «Зритель» осталось 5 ч</div>
+    </section>
+
+    <div class="stats-grid">
+      <div class="stat"><div class="stat-v" id="st-hours">0</div><div class="stat-l">часов</div></div>
+      <div class="stat"><div class="stat-v" id="st-titles">0</div><div class="stat-l">тайтлов</div></div>
+      <div class="stat"><div class="stat-v" id="st-ep">0</div><div class="stat-l">серий</div></div>
+      <div class="stat"><div class="stat-v" id="st-days">0</div><div class="stat-l">дней</div></div>
     </div>
-    <div id="my-hist-sec" class="hidden" style="margin-top:24px">
-      <div class="sec-head"><h2>История</h2><button id="hist-clear">Очистить</button></div>
-      <div id="hist-grid" class="grid"></div>
+
+    <div class="sec-head"><h2>Любимые жанры</h2></div>
+    <div id="prof-genres" class="genres"></div>
+    <div id="prof-genres-empty" class="mini-empty">Появятся, когда вы что-нибудь посмотрите</div>
+
+    <div class="sec-head" style="margin-top:22px"><h2>Достижения</h2><span id="prof-ach-count" class="sec-note"></span></div>
+    <div id="prof-achievements" class="achievements"></div>
+
+    <div class="sec-head" style="margin-top:22px">
+      <h2>Мои списки</h2>
+      <button id="btn-import">Синхронизировать</button>
     </div>
-    <div id="my-empty" class="empty"><span class="big">📺</span>Здесь появятся избранное<br>и то, что вы смотрели</div>
+    <div class="list-tabs" id="list-tabs">
+      <button data-list="watching" class="ltab on">Смотрю</button>
+      <button data-list="planned" class="ltab">В планах</button>
+      <button data-list="completed" class="ltab">Просмотрено</button>
+      <button data-list="dropped" class="ltab">Брошено</button>
+    </div>
+    <div id="list-grid" class="grid"></div>
+    <div id="list-empty" class="empty hidden"><span class="big">📋</span>Список пуст<br><span class="empty-sub">Добавляйте тайтлы из плеера или импортируйте с Shikimori</span></div>
+
+    <div class="sec-head" style="margin-top:26px"><h2>Избранное</h2><button id="fav-clear">Очистить</button></div>
+    <div id="fav-grid" class="grid"></div>
+    <div id="fav-empty" class="mini-empty">Пока пусто — жмите ♡ в плеере</div>
+
+    <div class="sec-head" style="margin-top:26px"><h2>История</h2><button id="hist-clear">Очистить</button></div>
+    <div id="hist-grid" class="grid"></div>
+    <div id="hist-empty" class="mini-empty">Здесь появятся просмотренные тайтлы</div>
   </main>
 </div>
 
@@ -199,20 +133,40 @@ img{display:block}
   <div class="p-head">
     <button id="btn-back" class="back"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>Назад</button>
     <h2 id="p-title" class="p-title"></h2>
+    <button id="p-party" class="p-icon" aria-label="Смотреть вместе">👥</button>
     <button id="p-fav" class="p-icon" aria-label="В избранное">♡</button>
     <button id="p-full" class="p-icon" aria-label="На весь экран">⛶</button>
   </div>
   <div class="p-body">
-    <div class="p-wrap" id="p-wrap">
-      <iframe id="p-iframe" allowfullscreen allow="autoplay; fullscreen; encrypted-media" referrerpolicy="origin"></iframe>
-      <div id="p-loader" class="p-overlay"><div><div class="spin" style="margin:0 auto"></div><div class="txt">Загрузка видео…</div></div></div>
-      <div id="p-error" class="p-overlay hidden"><div><div class="p-err-emoji">🎬</div><div class="p-err-title">Источник видео не подключён</div><div class="p-err-sub">Попробуйте другую озвучку или откройте в новой вкладке</div></div></div>
+    <div class="p-stage">
+      <div class="p-wrap" id="p-wrap">
+        <iframe id="p-iframe" allowfullscreen allow="autoplay; fullscreen; encrypted-media" referrerpolicy="origin"></iframe>
+        <div id="p-loader" class="p-overlay"><div><div class="spin" style="margin:0 auto"></div><div class="txt">Загрузка видео…</div></div></div>
+        <div id="p-error" class="p-overlay hidden">
+          <div>
+            <div class="p-err-emoji">🎬</div>
+            <div class="p-err-title">Источник видео не подключён</div>
+            <div class="p-err-sub">Попробуйте открыть в новой вкладке</div>
+          </div>
+        </div>
+        <button id="p-skip" class="skip-btn hidden">⏭ Пропустить опенинг</button>
+        <div id="p-dub" class="dub-hint hidden">Озвучка — в меню плеера</div>
+      </div>
     </div>
+
     <div class="p-actions">
+      <button id="p-status" class="pill">+ В список</button>
       <a id="p-open" href="#" target="_blank" rel="noopener">Открыть в новой вкладке ↗</a>
       <button id="p-retry">Перезагрузить</button>
+      <a id="p-shiki" class="pill" href="#" target="_blank" rel="noopener">Shikimori ↗</a>
+      <a id="p-mal" class="pill" href="#" target="_blank" rel="noopener">MAL ↗</a>
     </div>
-    <div id="p-voices" class="voices"></div>
+
+    <div id="p-progress" class="resume-row hidden">
+      <span id="p-progress-text"></span>
+      <button id="p-restart">С начала</button>
+    </div>
+
     <div id="p-meta" class="meta"></div>
     <div id="p-genres" class="genres"></div>
     <p id="p-desc" class="desc clamp"></p>
@@ -228,1039 +182,107 @@ img{display:block}
   <button id="tab-search" class="tab">
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
     <span>Поиск</span></button>
-  <button id="tab-my" class="tab">
-    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-    <span>Моё</span></button>
+  <button id="tab-profile" class="tab">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+    <span>Профиль</span></button>
 </nav>
+
+<!-- ================= ЖАНРЫ ================= -->
+<div id="genre-sheet" class="sheet hidden">
+  <div class="sheet-card">
+    <div class="sheet-head"><h3>Жанры</h3><button class="icon-btn" data-close="genre-sheet" aria-label="Закрыть">✕</button></div>
+    <div id="genre-panel" class="genre-panel"></div>
+  </div>
+</div>
+
+<!-- ================= WATCH PARTY ================= -->
+<div id="party-sheet" class="sheet hidden">
+  <div class="sheet-card">
+    <div class="sheet-head"><h3>Смотреть вместе</h3><button class="icon-btn" data-close="party-sheet" aria-label="Закрыть">✕</button></div>
+
+    <div id="party-setup">
+      <p class="hint">Комната синхронизирует паузу, перемотку и время, а чат общий. Хост ведёт, остальные догоняют.</p>
+      <label class="field-label">Ваше имя</label>
+      <input id="party-nick" class="field" maxlength="20" placeholder="Например, Сакура">
+      <div class="row">
+        <button id="party-create" class="btn-primary">Создать комнату</button>
+        <button id="party-join-toggle" class="btn-ghost">Войти по коду</button>
+      </div>
+      <div id="party-join-box" class="hidden">
+        <input id="party-code-input" class="field field-code" maxlength="6" placeholder="КОД" autocapitalize="characters">
+        <button id="party-join" class="btn-primary">Войти</button>
+      </div>
+      <p class="hint tiny">Комнаты работают через публичный канал ntfy.sh. Не делитесь личными данными — чат видят все, кто знает код.</p>
+    </div>
+
+    <div id="party-room" class="hidden">
+      <div class="party-code-row">
+        <div><span class="field-label">Код комнаты</span><b id="party-code">—</b></div>
+        <button id="party-copy" class="btn-ghost">Копировать ссылку</button>
+      </div>
+      <div class="party-status"><span id="party-people">1 участник</span><span id="party-role"></span></div>
+      <div id="party-chat" class="chat"></div>
+      <div class="chat-input">
+        <input id="party-msg" class="field" maxlength="300" placeholder="Сообщение…" autocomplete="off">
+        <button id="party-send" class="send-btn" aria-label="Отправить">➤</button>
+      </div>
+      <div class="row">
+        <button id="party-sync" class="btn-primary">Синхронизировать</button>
+        <button id="party-leave" class="btn-ghost">Выйти</button>
+      </div>
+      <p class="hint tiny" id="party-hint">Откройте тайтл — остальные получат его автоматически.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ================= НАСТРОЙКИ ================= -->
+<div id="settings-sheet" class="sheet hidden">
+  <div class="sheet-card">
+    <div class="sheet-head"><h3>Настройки</h3><button class="icon-btn" data-close="settings-sheet" aria-label="Закрыть">✕</button></div>
+
+    <div class="setting">
+      <div><b>Пропускать опенинг</b><div class="setting-sub">Автоматически проматывать начало серии</div></div>
+      <button id="set-skip" class="switch on" role="switch" aria-checked="true"><span></span></button>
+    </div>
+    <div class="setting">
+      <div><b>Длина опенинга</b><div class="setting-sub">Куда перематывать</div></div>
+      <select id="set-skip-len" class="select">
+        <option value="60">1:00</option>
+        <option value="75">1:15</option>
+        <option value="90" selected>1:30</option>
+        <option value="105">1:45</option>
+      </select>
+    </div>
+    <div class="setting">
+      <div><b>Улучшение картинки</b><div class="setting-sub">contrast 1.05 · saturate 1.1</div></div>
+      <button id="set-fx" class="switch on" role="switch" aria-checked="true"><span></span></button>
+    </div>
+    <div class="setting">
+      <div><b>Продолжать с места</b><div class="setting-sub">Запоминать позицию просмотра</div></div>
+      <button id="set-resume" class="switch on" role="switch" aria-checked="true"><span></span></button>
+    </div>
+
+    <div class="sheet-sep"></div>
+    <div class="sec-head"><h2>Данные</h2></div>
+    <div class="row wrap">
+      <button id="btn-import-2" class="btn-ghost">Импорт с Shikimori / MAL</button>
+      <button id="btn-export" class="btn-ghost">Экспорт данных</button>
+      <button id="btn-reset" class="btn-ghost danger">Сбросить всё</button>
+    </div>
+    <input id="import-file" type="file" accept=".xml,text/xml,application/xml" class="hidden">
+
+    <div class="sheet-sep"></div>
+    <p class="hint tiny">
+      Синхронизация списков работает через файл экспорта: Shikimori → Профиль → Экспорт,
+      MAL → Anime List → Export. Файл разбирается прямо в браузере, никуда не отправляется.
+      Прямой вход по OAuth невозможен: статический сайт не может хранить client_secret.
+    </p>
+    <p class="hint tiny" id="settings-version"></p>
+  </div>
+</div>
 
 <div id="toast" class="toast hidden"></div>
 
-<script>
-'use strict';
-
-/* ============================================================
-   PWA
-   ============================================================ */
-if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol))
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-
-/* ============================================================
-   КОНФИГ
-   ============================================================ */
-const $ = id => document.getElementById(id);
-const KODIK = 'https://kodik-api.com';
-const PAGE_LIMIT = 100;         // Kodik отдаёт одну строку на озвучку — берём с запасом
-const TTL = 15 * 60 * 1000;     // время жизни кеша подборок
-
-/* Токены Kodik зашифрованы (перевёрнутая перестановка base64).
-   Невалидные отбрасываются при расшифровке. */
-const ENC_TOKENS = [
-  "==QO0ADM3kTZmRTNiRDNjFDM==QOxkDMzQjZ4ADZ4zNhZTN",
-  "==QNyE2NzIjM4ETM3MmNklDM==gY5EzNxIzY0gjZ1kDZkFDN",
-  "==wMjhDN5QzYkNjZyQmM2ETO==QYjZjYkRjNxMWZ3YTNidzN",
-  "==QZiZDNxITZlFDZwIjZ3EjM==AN0UmZlVzN4UWO3EDZ3QDN"
-];
-function decryptToken(t){
-  try{
-    const h = Math.floor(t.length / 2);
-    const a = t.substring(0, h).split('').reverse().join('');
-    const b = t.substring(h).split('').reverse().join('');
-    return atob(b) + atob(a);
-  }catch(e){ return ''; }
-}
-const TOKENS = ENC_TOKENS.map(decryptToken).filter(t => /^[0-9a-f]{32}$/.test(t));
-
-const GENRES = ['боевик','комедия','фэнтези','романтика','драма','детектив','приключения','фантастика',
-  'сёнен','сёдзё','сэйнэн','дзёсэй','меха','спорт','музыка','ужасы','мистика','повседневность',
-  'школа','исэкай','пародия','суперсила','вампиры','демоны','военное','исторический','космос',
-  'магия','психологическое','триллер','гарем','киберпанк','самураи','детское'];
-
-/* ============================================================
-   УТИЛИТЫ
-   ============================================================ */
-const LS = {
-  get(k, def){
-    try{ const v = JSON.parse(localStorage.getItem('anime_' + k)); return v == null ? def : v; }
-    catch(e){ return def; }
-  },
-  set(k, v){ try{ localStorage.setItem('anime_' + k, JSON.stringify(v)); }catch(e){} },
-  del(k){ try{ localStorage.removeItem('anime_' + k); }catch(e){} }
-};
-
-function toast(msg){
-  const el = $('toast');
-  el.textContent = msg;
-  el.classList.remove('hidden');
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.add('hidden'), 2400);
-}
-
-async function getJSON(url, ms = 9000){
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), ms);
-  try{
-    const r = await fetch(url, { signal: ctrl.signal, credentials: 'omit' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return await r.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-const qs = obj => new URLSearchParams(obj).toString();
-const absUrl = u => !u ? '' : (u.startsWith('//') ? 'https:' + u : u);
-const num = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : 0; };
-const uniq = a => [...new Set(a)];
-
-function stripTags(s){
-  return String(s || '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
-}
-
-const KIND = { 'tv':'ТВ-сериал', 'movie':'Фильм', 'ova':'OVA', 'ona':'ONA', 'special':'Спешл', 'anime-serial':'Сериал' };
-
-/* ============================================================
-   API KODIK (напрямую, CORS открыт)
-   ============================================================ */
-let tokenIdx = 0;
-
-async function api(path, params = {}){
-  if (!TOKENS.length) return null;
-  for (let i = 0; i < TOKENS.length; i++){
-    const idx = (tokenIdx + i) % TOKENS.length;
-    let data = null;
-    try{
-      data = await getJSON(KODIK + '/' + path + '?' + qs({ token: TOKENS[idx], ...params }));
-    }catch(e){
-      continue; // битый токен / сеть — пробуем следующий
-    }
-    if (data && Array.isArray(data.results)){
-      tokenIdx = idx;
-      return data;
-    }
-    if (data && (data.error || data.message)) continue;
-  }
-  return null;
-}
-
-/* next_page -> курсор "next", чтобы не тащить чужой токен в URL */
-function cursorOf(nextPage){
-  if (!nextPage) return null;
-  try{ return new URL(nextPage).searchParams.get('next'); }catch(e){ return null; }
-}
-
-const listParams = extra => ({ limit: PAGE_LIMIT, types: 'anime,anime-serial', with_material_data: 'true', ...extra });
-
-/* ============================================================
-   НОРМАЛИЗАЦИЯ
-   ============================================================ */
-function keyOf(r){
-  if (r.shikimori_id) return 's' + r.shikimori_id;
-  const base = (r.title_orig || r.title || '').toLowerCase().replace(/\s+/g, ' ').trim();
-  return base + '|' + (r.year || '');
-}
-
-function qualityRank(q){
-  const s = String(q || '');
-  if (/2160|4k/i.test(s)) return 4;
-  if (/1080/.test(s)) return 3;
-  if (/720/.test(s)) return 2;
-  if (/480/.test(s)) return 1;
-  return 0;
-}
-
-function normalize(r){
-  const md = r.material_data || {};
-  let poster = md.poster_url || md.anime_poster_url || '';
-  let posterAlt = md.anime_poster_url || md.poster_url || '';
-  poster = absUrl(poster); posterAlt = absUrl(posterAlt);
-  if (posterAlt === poster) posterAlt = '';
-  const genres = uniq((md.all_genres || []).map(g => String(g).toLowerCase()))
-    .filter(g => g && g !== 'аниме' && g !== 'мультфильм');
-  return {
-    key: keyOf(r),
-    sid: r.shikimori_id || null,
-    title: r.title || md.title || r.title_orig || 'Без названия',
-    orig: r.title_orig || '',
-    poster, posterAlt,
-    year: r.year || md.year || '',
-    rating: num(md.shikimori_rating) || num(md.kinopoisk_rating) || 0,
-    kind: KIND[md.anime_kind || r.type] || 'Аниме',
-    status: md.anime_status || '',
-    episodes: md.episodes_total || r.episodes_count || 0,
-    duration: md.duration || 0,
-    minAge: md.minimal_age || 0,
-    desc: stripTags(md.description || md.anime_description || ''),
-    genres: genres.slice(0, 8),
-    voices: []
-  };
-}
-
-function voiceOf(r){
-  return {
-    id: r.id,
-    translation: (r.translation && r.translation.title) || 'Оригинал',
-    quality: r.quality || '',
-    link: absUrl(r.link),
-    episodes: r.episodes_count || 0,
-    last: r.last_episode || 0
-  };
-}
-
-function groupResults(results){
-  const map = new Map();
-  for (const r of results || []){
-    const k = keyOf(r);
-    let g = map.get(k);
-    if (!g){
-      g = { raw: r };
-      map.set(k, g);
-    }else if (!g.raw.material_data && r.material_data){
-      g.raw = r;
-    }
-    if (!g.voices) g.voices = [];
-    const v = voiceOf(r);
-    if (v.link && !g.voices.some(x => x.link === v.link)) g.voices.push(v);
-  }
-  const out = [];
-  for (const g of map.values()){
-    const item = normalize(g.raw);
-    item.voices = (g.voices || []).sort((a, b) =>
-      qualityRank(b.quality) - qualityRank(a.quality) || a.translation.localeCompare(b.translation));
-    out.push(item);
-  }
-  return out;
-}
-
-/* ============================================================
-   КЕШ ПОДБОРОК
-   ============================================================ */
-function cacheGet(k){
-  const c = LS.get('c_' + k, null);
-  if (!c || !c.items || c.items.length < 6) return null;
-  if (Date.now() - (c.t || 0) > TTL) return null;
-  return c;
-}
-function cacheSet(k, items, next){
-  LS.set('c_' + k, { t: Date.now(), items: items.slice(0, 60), next: next || null });
-}
-
-/* ============================================================
-   КАРТОЧКИ
-   ============================================================ */
-function imgErr(im){
-  const alt = im.dataset.alt;
-  if (alt && im.src !== alt){
-    delete im.dataset.alt;
-    im.src = alt;
-    return;
-  }
-  const d = document.createElement('div');
-  d.className = 'ph';
-  d.textContent = '🎬';
-  im.replaceWith(d);
-}
-
-function cardEl(it, opts = {}){
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'card';
-
-  const poster = document.createElement('div');
-  poster.className = 'poster';
-  if (it.poster){
-    const img = document.createElement('img');
-    img.src = it.poster;
-    img.alt = '';
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    if (it.posterAlt) img.dataset.alt = it.posterAlt;
-    img.addEventListener('error', () => imgErr(img));
-    poster.appendChild(img);
-  }else{
-    const ph = document.createElement('div');
-    ph.className = 'ph';
-    ph.textContent = '🎬';
-    poster.appendChild(ph);
-  }
-  if (it.rating){
-    const badge = document.createElement('span');
-    badge.className = 'badge';
-    badge.textContent = '★ ' + it.rating.toFixed(1);
-    poster.appendChild(badge);
-  }
-  if (it.status === 'ongoing'){
-    const nb = document.createElement('span');
-    nb.className = 'badge new';
-    nb.textContent = 'ON';
-    poster.appendChild(nb);
-  }
-  b.appendChild(poster);
-
-  const t = document.createElement('div');
-  t.className = 'ctitle';
-  t.textContent = it.title;
-  b.appendChild(t);
-
-  const sub = [it.year || '', it.episodes ? it.episodes + ' эп.' : ''].filter(Boolean).join(' · ');
-  if (sub && !opts.noSub){
-    const s = document.createElement('div');
-    s.className = 'csub';
-    s.textContent = sub;
-    b.appendChild(s);
-  }
-
-  b.addEventListener('click', () => openPlayer(it));
-  return b;
-}
-
-function skeleton(grid, n = 12){
-  let h = '';
-  for (let i = 0; i < n; i++) h += '<div><div class="skel"></div><div class="skel skel-line"></div></div>';
-  grid.innerHTML = h;
-}
-
-function renderInto(grid, items, opts){
-  grid.innerHTML = '';
-  const frag = document.createDocumentFragment();
-  items.forEach(it => frag.appendChild(cardEl(it, opts)));
-  grid.appendChild(frag);
-}
-
-/* ============================================================
-   ГЛАВНАЯ
-   ============================================================ */
-const home = {
-  sec: 'popular', genre: '',
-  items: [], keys: new Set(),
-  next: null, done: false, loading: false, req: 0
-};
-
-function sectionParams(sec, genre){
-  const base = { sort: 'shikimori_rating', order: 'desc' };
-  const p = {
-    popular: base,
-    top:     { sort: 'shikimori_rating', order: 'desc' },
-    ongoing: { sort: 'shikimori_rating', order: 'desc', anime_status: 'ongoing' },
-    fresh:   { sort: 'updated_at', order: 'desc' }
-  }[sec] || base;
-  const params = listParams(p);
-  if (genre) params.genres = genre;
-  return params;
-}
-
-async function loadHome(reset = true){
-  if (reset){
-    home.req++;
-    home.items = []; home.keys = new Set(); home.next = null;
-    home.done = false; home.loading = true;
-    skeleton($('home-grid'));
-    $('home-empty').classList.add('hidden');
-    $('home-empty').innerHTML = '<span class="big">🔍</span>Ничего не нашлось';
-    $('home-more').classList.add('hidden');
-  }else if (home.loading){
-    return;
-  }
-
-  const my = home.req;
-
-  if (home.sec === 'random'){
-    const items = await loadRandom(home.genre);
-    if (my !== home.req) return;
-    home.loading = false;
-    home.items = items; home.done = true;
-    renderInto($('home-grid'), items);
-    $('home-empty').classList.toggle('hidden', items.length > 0);
-    return;
-  }
-
-  const cached = reset ? cacheGet(home.sec + '|' + home.genre) : null;
-  if (cached){
-    home.items = cached.items;
-    home.keys = new Set(cached.items.map(i => i.key));
-    home.next = cached.next || null;
-    home.done = !cached.next;
-    home.loading = false;
-    renderInto($('home-grid'), cached.items);
-    refreshHome(my);
-    return;
-  }
-
-  const chunk = await fetchListChunk(home.sec, home.genre, null, 4, 24);
-  if (my !== home.req) return;
-  home.loading = false;
-  if (!chunk){ homeFail(); return; }
-
-  const items = chunk.items;
-  home.items = items;
-  home.keys = new Set(items.map(i => i.key));
-  home.next = chunk.next;
-  home.done = chunk.done;
-
-  renderInto($('home-grid'), items);
-  $('home-empty').classList.toggle('hidden', items.length > 0);
-  if (items.length) cacheSet(home.sec + '|' + home.genre, items, chunk.next);
-}
-
-/* Забирает несколько страниц API и схлопывает дубли озвучек.
-   Возвращает уникальные тайтлы и курсор следующей страницы. */
-async function fetchListChunk(sec, genre, startNext, maxPages, target){
-  let next = startNext || null;
-  let pages = 0, got = false;
-  const seen = new Set(), items = [];
-
-  while (pages < maxPages && items.length < target){
-    const params = { ...sectionParams(sec, genre), ...(next ? { next } : {}) };
-    const res = await api('list', params);
-    pages++;
-    if (!res) break;
-    got = true;
-    groupResults(res.results).forEach(it => {
-      if (seen.has(it.key)) return;
-      seen.add(it.key);
-      items.push(it);
-    });
-    next = cursorOf(res.next_page);
-    if (!next) break;
-  }
-  if (!got) return null;
-  return { items, next, done: !next };
-}
-
-function homeFail(){
-  $('home-grid').innerHTML = '';
-  $('home-empty').classList.remove('hidden');
-  $('home-empty').innerHTML = '<span class="big">📡</span>Не удалось загрузить каталог<br><span style="font-size:12px">Проверьте интернет и обновите ↻</span>';
-}
-
-/* фон-обновление кешированной подборки */
-async function refreshHome(my){
-  const chunk = await fetchListChunk(home.sec, home.genre, null, 2, 16);
-  if (!chunk || my !== home.req) return;
-  const fresh = chunk.items;
-  if (!fresh.length) return;
-  cacheSet(home.sec + '|' + home.genre, fresh, chunk.next);
-  if (home.items.length && home.items[0].key === fresh[0].key) return;
-
-  // не теряем уже показанные карточки, просто ставим свежие вперёд
-  const freshKeys = new Set(fresh.map(i => i.key));
-  const merged = fresh.concat(home.items.filter(i => !freshKeys.has(i.key)));
-  home.items = merged;
-  home.keys = new Set(merged.map(i => i.key));
-  if (window.scrollY < 300) renderInto($('home-grid'), merged);
-}
-
-async function loadHomeMore(){
-  if (home.loading || home.done || home.sec === 'random') return;
-  const my = home.req;
-  home.loading = true;
-  $('home-more').classList.remove('hidden');
-
-  const chunk = await fetchListChunk(home.sec, home.genre, home.next, 3, 18);
-  home.loading = false;
-  if (my !== home.req) return;
-  $('home-more').classList.add('hidden');
-  if (!chunk){ home.done = true; return; }
-
-  const fresh = chunk.items.filter(i => !home.keys.has(i.key));
-  fresh.forEach(i => home.keys.add(i.key));
-  home.next = chunk.next;
-  home.done = chunk.done;
-  if (!fresh.length && home.done) return;
-
-  const frag = document.createDocumentFragment();
-  fresh.forEach(i => { home.items.push(i); frag.appendChild(cardEl(i)); });
-  $('home-grid').appendChild(frag);
-}
-
-async function loadRandom(genre){
-  const items = [];
-  const seen = new Set();
-  for (let attempt = 0; attempt < 2 && items.length < 12; attempt++){
-    const year = 1990 + Math.floor(Math.random() * 37);
-    const res = await api('list', listParams({
-      sort: 'shikimori_rating', order: 'desc',
-      year: String(year),
-      ...(genre ? { genres: genre } : {})
-    }));
-    groupResults(res && res.results).forEach(it => {
-      if (seen.has(it.key)) return;
-      seen.add(it.key);
-      items.push(it);
-    });
-  }
-  if (!items.length){
-    const res = await api('list', listParams({ sort: 'views', order: 'desc', ...(genre ? { genres: genre } : {}) }));
-    groupResults(res && res.results).forEach(it => {
-      if (seen.has(it.key)) return;
-      seen.add(it.key);
-      items.push(it);
-    });
-  }
-  for (let i = items.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
-  }
-  return items;
-}
-
-function buildGenrePanel(){
-  const panel = $('genre-panel');
-  panel.innerHTML = '';
-  const all = document.createElement('button');
-  all.className = 'chip' + (home.genre ? '' : ' on');
-  all.textContent = 'Все';
-  all.onclick = () => selectGenre('');
-  panel.appendChild(all);
-  GENRES.forEach(g => {
-    const b = document.createElement('button');
-    b.className = 'chip' + (home.genre === g ? ' on' : '');
-    b.textContent = g;
-    b.onclick = () => selectGenre(g);
-    panel.appendChild(b);
-  });
-}
-
-function selectGenre(g){
-  home.genre = g;
-  $('genre-label').textContent = g ? '· ' + g : '';
-  $('btn-genres').classList.toggle('on', !!g);
-  $('genre-panel').classList.add('hidden');
-  buildGenrePanel();
-  loadHome(true);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-/* ============================================================
-   ПОИСК
-   ============================================================ */
-const search = { q: '', items: [], keys: new Set(), next: null, done: false, loading: false, req: 0, timer: null };
-
-async function doSearch(q, more = false){
-  if (!q){ resetSearch(); return; }
-  if (!more){
-    search.req++;
-    search.q = q;
-    search.items = []; search.keys = new Set(); search.next = null; search.done = false;
-    $('search-empty').classList.add('hidden');
-    $('search-hint').classList.add('hidden');
-    skeleton($('search-grid'), 6);
-    setSearchStatus('Ищем «' + q + '»…');
-  }
-  if (search.loading) return;
-  const my = search.req;
-  search.loading = true;
-
-  // добираем страницы, пока не наберём достаточно уникальных тайтлов
-  let pages = 0, added = 0;
-  while (pages < 4 && !search.done && added < 12){
-    const res = await api('search', {
-      title: q, limit: PAGE_LIMIT,
-      types: 'anime,anime-serial', with_material_data: 'true',
-      ...(search.next ? { next: search.next } : {})
-    });
-    pages++;
-    if (!res){ search.done = true; break; }
-    const groups = groupResults(res.results).filter(i => !search.keys.has(i.key));
-    groups.forEach(i => { search.keys.add(i.key); search.items.push(i); });
-    added += groups.length;
-    search.next = cursorOf(res.next_page);
-    if (!search.next) search.done = true;
-  }
-
-  search.loading = false;
-  if (my !== search.req) return;
-
-  setSearchStatus(null);
-  const start = more ? $('search-grid').children.length : 0;
-  if (!more) $('search-grid').innerHTML = '';
-  const frag = document.createDocumentFragment();
-  search.items.slice(start).forEach(i => frag.appendChild(cardEl(i)));
-  $('search-grid').appendChild(frag);
-  $('search-empty').classList.toggle('hidden', search.items.length > 0);
-  $('search-more').classList.add('hidden');
-
-  if (!search.items.length && !search.loading && search.done)
-    $('search-empty').classList.remove('hidden');
-}
-
-function resetSearch(){
-  search.req++;
-  search.q = ''; search.items = []; search.keys = new Set();
-  search.next = null; search.done = false; search.loading = false;
-  $('search-grid').innerHTML = '';
-  $('search-empty').classList.add('hidden');
-  $('search-more').classList.add('hidden');
-  setSearchStatus(null);
-  $('search-hint').classList.remove('hidden');
-}
-
-async function loadSearchMore(){
-  if (!search.q || search.loading || search.done) return;
-  $('search-more').classList.remove('hidden');
-  await doSearch(search.q, true);
-}
-
-function setSearchStatus(msg){
-  const el = $('search-status');
-  el.classList.toggle('hidden', !msg);
-  if (msg) $('search-status-text').textContent = msg;
-}
-
-/* ============================================================
-   ИСТОРИЯ / ИЗБРАННОЕ
-   ============================================================ */
-let watched = LS.get('hist', []);
-let favs = LS.get('fav', []);
-
-const slim = it => ({
-  key: it.key, sid: it.sid, title: it.title, orig: it.orig,
-  poster: it.poster, posterAlt: it.posterAlt, year: it.year,
-  rating: it.rating, kind: it.kind, episodes: it.episodes,
-  status: it.status, desc: it.desc, genres: it.genres
-});
-
-function addHistory(it){
-  watched = watched.filter(x => x.key !== it.key);
-  watched.unshift(slim(it));
-  watched = watched.slice(0, 30);
-  LS.set('hist', watched);
-  renderHistoryRow();
-}
-
-function isFav(key){ return favs.some(x => x.key === key); }
-
-function toggleFav(it){
-  if (isFav(it.key)) favs = favs.filter(x => x.key !== it.key);
-  else { favs.unshift(slim(it)); favs = favs.slice(0, 100); }
-  LS.set('fav', favs);
-  return isFav(it.key);
-}
-
-function renderHistoryRow(){
-  const sec = $('continue-sec');
-  const row = $('continue-row');
-  row.innerHTML = '';
-  if (!watched.length){ sec.classList.add('hidden'); return; }
-  sec.classList.remove('hidden');
-  watched.slice(0, 12).forEach(it => row.appendChild(cardEl(it, { noSub: false })));
-}
-
-function renderMy(){
-  const favSec = $('my-fav-sec'), histSec = $('my-hist-sec'), empty = $('my-empty');
-  $('fav-grid').innerHTML = '';
-  $('hist-grid').innerHTML = '';
-  favSec.classList.toggle('hidden', !favs.length);
-  histSec.classList.toggle('hidden', !watched.length);
-  empty.classList.toggle('hidden', !!(favs.length || watched.length));
-  const f = document.createDocumentFragment();
-  favs.forEach(it => f.appendChild(cardEl(it)));
-  $('fav-grid').appendChild(f);
-  const h = document.createDocumentFragment();
-  watched.forEach(it => h.appendChild(cardEl(it)));
-  $('hist-grid').appendChild(h);
-}
-
-/* ============================================================
-   ПЛЕЕР
-   ============================================================ */
-let current = null;
-let loadTimer = null;
-let playingLink = '';
-
-async function openPlayer(it){
-  current = it;
-  $('player').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  $('player').scrollTop = 0;
-
-  $('p-title').textContent = it.title;
-  $('p-voices').innerHTML = '';
-  $('p-genres').innerHTML = '';
-  setDesc(it.desc || 'Загрузка описания…');
-  $('p-meta').innerHTML = '';
-  $('p-iframe').src = 'about:blank';
-  $('p-error').classList.add('hidden');
-  $('p-open').href = '#';
-  updateFavIcon(it);
-  pushPlayerState();
-  playingLink = '';
-
-  const hadVoices = !!(it.voices && it.voices.length);
-  playItem(it);
-  addHistory(it);
-
-  if (hadVoices){
-    enrichVoices(it);           // дозагружаем остальные озвучки в фоне
-  }else{
-    $('p-error').classList.add('hidden');
-    $('p-loader').classList.remove('hidden');
-    const found = await lookupSources(it);
-    if (current !== it) return;
-    if (found){
-      it.voices = found.voices;
-      if (!it.desc && found.desc) it.desc = found.desc;
-      if ((!it.genres || !it.genres.length) && found.genres.length){
-        it.genres = found.genres;
-        renderGenres(it.genres);
-      }
-      playItem(it);
-    }else{
-      $('p-loader').classList.add('hidden');
-      $('p-error').classList.remove('hidden');
-    }
-  }
-  setDesc(it.desc || 'Описание отсутствует');
-}
-
-function setDesc(text){
-  const d = $('p-desc');
-  d.textContent = text;
-  d.classList.add('clamp');
-  const btn = $('p-desc-toggle');
-  btn.textContent = 'Читать полностью';
-  requestAnimationFrame(() => {
-    btn.classList.toggle('hidden', d.scrollHeight <= d.clientHeight + 4);
-  });
-}
-
-/* Ищем все озвучки тайтла по shikimori_id (или по названию) */
-async function lookupSources(it){
-  const data = it.sid
-    ? await api('search', { shikimori_id: it.sid, with_material_data: 'true', limit: 100 })
-    : await api('search', { title: it.title, limit: 100, types: 'anime,anime-serial', with_material_data: 'true' });
-  const groups = groupResults(data && data.results);
-  if (!groups.length) return null;
-  return groups.find(g => g.key === it.key) || groups[0];
-}
-
-async function enrichVoices(it){
-  const found = await lookupSources(it);
-  if (!found || current !== it || !it.voices) return;
-  const known = new Set(it.voices.map(v => v.link));
-  let added = 0;
-  found.voices.forEach(v => {
-    if (known.has(v.link)) return;
-    known.add(v.link);
-    it.voices.push(v);
-    added++;
-  });
-  if (!it.desc && found.desc){
-    it.desc = found.desc;
-    setDesc(found.desc);
-  }
-  if ((!it.genres || !it.genres.length) && found.genres.length){
-    it.genres = found.genres;
-    renderGenres(it.genres);
-  }
-  if (added) renderVoices(it);
-}
-
-function playItem(it){
-  renderGenres(it.genres);
-  renderMeta(it);
-
-  if (!it.voices || !it.voices.length){
-    $('p-loader').classList.add('hidden');
-    $('p-error').classList.remove('hidden');
-    $('p-open').href = '#';
-    return;
-  }
-  renderVoices(it);
-  play(it.voices[0]);
-}
-
-function renderVoices(it){
-  const v = $('p-voices');
-  v.innerHTML = '';
-  const active = playingLink || (it.voices[0] && it.voices[0].link);
-  it.voices.slice(0, 24).forEach(voice => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'voice' + (absUrl(voice.link) === active ? ' on' : '');
-    b.textContent = (voice.translation || 'Озвучка') + (voice.quality ? ' · ' + voice.quality : '');
-    b.onclick = () => {
-      v.querySelectorAll('.voice').forEach(x => x.classList.remove('on'));
-      b.classList.add('on');
-      play(voice);
-    };
-    v.appendChild(b);
-  });
-}
-
-function play(voice){
-  const url = absUrl(voice.link);
-  if (!url){ showPlayError(); return; }
-  playingLink = url;
-  $('p-error').classList.add('hidden');
-  $('p-loader').classList.remove('hidden');
-  $('p-open').href = url;
-
-  const frame = $('p-iframe');
-  clearTimeout(loadTimer);
-  loadTimer = setTimeout(() => {
-    $('p-loader').classList.add('hidden');
-    toast('Видео грузится долго — попробуйте другую озвучку');
-  }, 12000);
-
-  let target = url;
-  try{
-    const u = new URL(url);
-    u.searchParams.set('translations', 'false'); // выбор озвучки — нашими чипами
-    target = u.href;
-  }catch(e){}
-
-  // сбрасываем src, чтобы повторный выбор той же озвучки реально перезапускал плеер
-  frame.onload = null;
-  frame.src = 'about:blank';
-  setTimeout(() => {
-    frame.onload = () => {
-      clearTimeout(loadTimer);
-      $('p-loader').classList.add('hidden');
-    };
-    frame.src = target;
-  }, 30);
-
-  const meta = $('p-meta');
-  meta.innerHTML = '';
-  addMeta(meta, voice.translation);
-  addMeta(meta, voice.quality);
-  if (voice.episodes) addMeta(meta, voice.episodes + ' эп.');
-  addMeta(meta, current && current.year);
-  addMeta(meta, current && current.kind);
-  if (current && current.rating) addMeta(meta, '★ ' + current.rating.toFixed(1));
-}
-
-function addMeta(container, value){
-  if (!value) return;
-  const s = document.createElement('span');
-  s.textContent = value;
-  container.appendChild(s);
-}
-
-function renderMeta(it){
-  const meta = $('p-meta');
-  meta.innerHTML = '';
-  addMeta(meta, it.kind);
-  addMeta(meta, it.year);
-  if (it.episodes) addMeta(meta, it.episodes + ' эп.');
-  if (it.minAge) addMeta(meta, it.minAge + '+');
-  if (it.rating) addMeta(meta, '★ ' + it.rating.toFixed(1));
-}
-
-function renderGenres(g){
-  const box = $('p-genres');
-  box.innerHTML = '';
-  (g || []).slice(0, 8).forEach(x => {
-    const s = document.createElement('span');
-    s.className = 'genre';
-    s.textContent = x;
-    box.appendChild(s);
-  });
-}
-
-function updateFavIcon(it){
-  const btn = $('p-fav');
-  const on = isFav(it.key);
-  btn.textContent = on ? '♥' : '♡';
-  btn.classList.toggle('on', on);
-}
-
-function showPlayError(){
-  $('p-loader').classList.add('hidden');
-  $('p-error').classList.remove('hidden');
-}
-
-function closePlayer(){
-  $('player').classList.remove('open');
-  $('p-iframe').onload = null;
-  $('p-iframe').src = 'about:blank';
-  document.body.style.overflow = '';
-  clearTimeout(loadTimer);
-  current = null;
-  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-  renderHistoryRow();
-  renderMy();
-}
-
-/* ============================================================
-   ВКЛАДКИ / НАВИГАЦИЯ
-   ============================================================ */
-function setTab(name){
-  const screens = { home: 'screen-home', search: 'screen-search', my: 'screen-my' };
-  Object.entries(screens).forEach(([k, id]) => $(id).classList.toggle('hidden', k !== name));
-  ['home', 'search', 'my'].forEach(k => $('tab-' + k).classList.toggle('on', k === name));
-  window.scrollTo(0, 0);
-  if (name === 'search') setTimeout(() => $('search-input').focus(), 60);
-  if (name === 'my') renderMy();
-}
-
-/* ============================================================
-   СОБЫТИЯ
-   ============================================================ */
-document.querySelectorAll('.sec-chip').forEach(ch => {
-  ch.onclick = () => {
-    document.querySelectorAll('.sec-chip').forEach(c => c.classList.remove('on'));
-    ch.classList.add('on');
-    home.sec = ch.dataset.sec;
-    window.scrollTo(0, 0);
-    loadHome(true);
-  };
-});
-
-$('tab-home').onclick = () => setTab('home');
-$('tab-search').onclick = () => setTab('search');
-$('tab-my').onclick = () => setTab('my');
-$('btn-back').onclick = () => {
-  if (history.state && history.state.player){
-    history.back();
-    // страховка: если запись не сдвинулась — закрываем сами
-    setTimeout(() => { if ($('player').classList.contains('open')) closePlayer(); }, 400);
-  }else{
-    closePlayer();
-  }
-};
-
-$('btn-refresh').onclick = () => {
-  ['c_' + home.sec + '|' + home.genre].forEach(LS.del);
-  toast('Обновляем…');
-  loadHome(true);
-};
-
-$('btn-genres').onclick = () => {
-  $('genre-panel').classList.toggle('hidden');
-};
-
-$('continue-clear').onclick = () => {
-  watched = [];
-  LS.set('hist', []);
-  renderHistoryRow();
-  toast('История очищена');
-};
-
-$('fav-clear').onclick = () => {
-  favs = [];
-  LS.set('fav', []);
-  renderMy();
-  toast('Избранное очищено');
-};
-
-$('hist-clear').onclick = () => {
-  watched = [];
-  LS.set('hist', []);
-  renderMy();
-  renderHistoryRow();
-  toast('История очищена');
-};
-
-$('p-fav').onclick = () => {
-  if (!current) return;
-  const on = toggleFav(current);
-  updateFavIcon(current);
-  toast(on ? 'Добавлено в избранное' : 'Удалено из избранного');
-};
-
-$('p-retry').onclick = () => {
-  if (!current) return;
-  const active = $('p-voices').querySelector('.voice.on');
-  const idx = active ? [...$('p-voices').children].indexOf(active) : 0;
-  const voice = current.voices && current.voices[idx];
-  if (voice) play(voice);
-};
-
-$('p-full').onclick = () => {
-  const el = $('p-wrap');
-  if (!document.fullscreenElement){
-    (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
-  }else{
-    document.exitFullscreen().catch(() => {});
-  }
-};
-
-$('p-desc-toggle').onclick = () => {
-  const d = $('p-desc');
-  const clamped = d.classList.toggle('clamp');
-  $('p-desc-toggle').textContent = clamped ? 'Читать полностью' : 'Свернуть';
-};
-
-const searchInput = $('search-input');
-searchInput.addEventListener('input', e => {
-  clearTimeout(search.timer);
-  const q = e.target.value.trim();
-  $('search-clear').classList.toggle('hidden', !q);
-  if (!q){ resetSearch(); return; }
-  if (q.length < 2){ setSearchStatus('Введите хотя бы 2 символа'); return; }
-  search.timer = setTimeout(() => doSearch(q), 400);
-});
-searchInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter'){
-    clearTimeout(search.timer);
-    const q = searchInput.value.trim();
-    if (q.length >= 2){ searchInput.blur(); doSearch(q); }
-  }
-});
-$('search-clear').onclick = () => {
-  searchInput.value = '';
-  $('search-clear').classList.add('hidden');
-  resetSearch();
-  searchInput.focus();
-};
-
-/* Бесконечная прокрутка */
-window.addEventListener('scroll', () => {
-  if ($('player').classList.contains('open')) return;
-  if (window.innerHeight + window.scrollY < document.body.offsetHeight - 700) return;
-  if (!$('screen-home').classList.contains('hidden')) loadHomeMore();
-  else if (!$('screen-search').classList.contains('hidden')) loadSearchMore();
-}, { passive: true });
-
-window.addEventListener('online', () => toast('Соединение восстановлено'));
-window.addEventListener('offline', () => toast('Нет соединения — показан кеш'));
-
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && current) addHistory(current);
-});
-
-/* Кнопка "Назад" устройства закрывает плеер, а не приложение */
-function pushPlayerState(){
-  try{ history.pushState({ player: true }, ''); }catch(e){}
-}
-window.addEventListener('popstate', () => {
-  if ($('player').classList.contains('open')) closePlayer();
-});
-
-/* ============================================================
-   СТАРТ
-   ============================================================ */
-(function init(){
-  if (!TOKENS.length){
-    $('home-empty').classList.remove('hidden');
-    $('home-empty').innerHTML = '<span class="big">🔑</span>Не удалось инициализировать доступ к каталогу';
-    return;
-  }
-  buildGenrePanel();
-  setTab('home');
-  renderHistoryRow();
-  loadHome(true);
-  idle(() => {
-    // тихо прогреваем кеш соседних подборок
-    ['ongoing', 'top'].forEach(async sec => {
-      if (cacheGet(sec + '|')) return;
-      const chunk = await fetchListChunk(sec, '', null, 2, 16);
-      if (chunk && chunk.items.length) cacheSet(sec + '|', chunk.items, chunk.next);
-    });
-  });
-})();
-
-function idle(fn){
-  if ('requestIdleCallback' in window) requestIdleCallback(fn, { timeout: 3000 });
-  else setTimeout(fn, 1200);
-}
-</script>
+<script src="app.js"></script>
 </body>
 </html>

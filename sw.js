@@ -1,6 +1,6 @@
 /* Service Worker: оболочка + кеш постеров */
-const VERSION = 'anime-v4';
-const CORE = ['./', './index.html', './manifest.json', './icon.png', './icon-192.png'];
+const VERSION = 'anime-v6';
+const CORE = ['./', './index.html', './app.css', './app.js', './manifest.json', './icon.png', './icon-192.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -29,7 +29,8 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  if (req.mode === 'navigate'){
+  /* Оболочка и статика: network-first с оффлайн-фолбэком */
+  if (req.mode === 'navigate' || new URL(req.url).origin === self.location.origin){
     e.respondWith(networkFirst(req));
   }
 });
@@ -52,15 +53,19 @@ async function cacheFirst(req){
 
 async function networkFirst(req){
   const cache = await caches.open(VERSION);
-  const shell = new URL('./index.html', self.registration.scope).href;
   try{
     const res = await fetch(req);
-    if (res && res.ok) cache.put(shell, res.clone());
+    if (res && res.ok) cache.put(req, res.clone());
     return res;
   }catch(e){
-    return (await cache.match(req))
-      || (await cache.match(shell))
-      || new Response('<h1>Нет сети</h1>', { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    const hit = await cache.match(req);
+    if (hit) return hit;
+    if (req.mode === 'navigate'){
+      const shell = await cache.match(new URL('./index.html', self.registration.scope).href);
+      if (shell) return shell;
+      return new Response('<h1>Нет сети</h1>', { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    return new Response('', { status: 504 });
   }
 }
 
