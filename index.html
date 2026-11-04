@@ -1,83 +1,129 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Anime">
 <meta name="theme-color" content="#0b0b0f">
+<meta name="description" content="Аниме онлайн — популярное, онгоинги, поиск и просмотр.">
 <title>Anime · アニメ</title>
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<link rel="manifest" id="manifest-link">
-<link rel="preconnect" href="https://shikimori.one" crossorigin>
-<link rel="preconnect" href="https://api.allorigins.win" crossorigin>
-<link rel="preconnect" href="https://corsproxy.io" crossorigin>
-<link rel="preconnect" href="https://api.codetabs.com" crossorigin>
+<link rel="manifest" href="manifest.json">
 <style>
-:root{--bg:#0b0b0f;--card:#17171c;--blue:#0a84ff;--mut:#98989f}
+:root{--bg:#0b0b0f;--card:#17171c;--blue:#0a84ff;--blue-btn:#0a6ad0;--mut:#98989f;--line:rgba(255,255,255,.08)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:#fff;font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Roboto,Arial,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:var(--blue);text-decoration:none}
 img{display:block}
 .hidden{display:none!important}
 .safe-top{padding-top:env(safe-area-inset-top)} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
-.top{position:sticky;top:0;z-index:40;padding:12px 16px 8px;background:rgba(15,15,20,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.08)}
-.logo-row{display:flex;align-items:baseline;gap:8px}
+
+.top{position:sticky;top:0;z-index:40;padding:12px 16px 8px;background:rgba(15,15,20,.82);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.logo-row{display:flex;align-items:center;gap:8px}
 .logo{font-size:24px;font-weight:800;letter-spacing:-.5px}
 .logo-sub{font-size:11px;color:var(--mut)}
+.icon-btn{margin-left:auto;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07);color:#d1d5db;font-size:16px}
+.icon-btn:active{background:rgba(255,255,255,.16)}
+
 .chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:0 0 auto;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.07);color:#d1d5db;font-size:14px;font-weight:500}
-.chip.on{background:var(--blue);color:#fff}
+.chip,.sec-chip{flex:0 0 auto;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.07);color:#d1d5db;font-size:14px;font-weight:500;white-space:nowrap;transition:background .15s,color .15s}
+.chip.on,.sec-chip.on{background:var(--blue-btn);color:#fff}
+.chip.ghost{background:transparent;border:1px solid rgba(255,255,255,.18)}
+.chip .cnt{font-size:11px;color:var(--mut);margin-left:4px}
+
+.genre-panel{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 6px;max-height:44vh;overflow-y:auto}
+.genre-panel .chip{padding:7px 13px;font-size:13px}
+
 .content{padding:16px 16px 96px}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .card{text-align:left;transition:transform .1s}
 .card:active{transform:scale(.95)}
-.poster{position:relative;aspect-ratio:2/3;border-radius:10px;overflow:hidden;background:var(--card);margin-bottom:6px;content-visibility:auto;contain-intrinsic-size:0 220px}
+.poster{position:relative;aspect-ratio:2/3;border-radius:10px;overflow:hidden;background:var(--card);margin-bottom:6px;content-visibility:auto;contain-intrinsic-size:0 180px}
 .poster img{width:100%;height:100%;object-fit:cover}
-.ph{width:100%;height:100%;display:grid;place-items:center;font-size:10px;color:#565661}
-.badge{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700}
+.ph{width:100%;height:100%;display:grid;place-items:center;font-size:22px;color:#565661}
+.badge{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.72);border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700}
+.badge.new{left:4px;right:auto;background:var(--blue-btn)}
 .ctitle{font-size:12px;font-weight:500;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.csub{font-size:10px;color:#9a9aa3;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 .skel{aspect-ratio:2/3;border-radius:10px;background:linear-gradient(100deg,#17171c 40%,#23232c 50%,#17171c 60%);background-size:200% 100%;animation:sh 1.1s infinite}
 .skel-line{height:12px;margin-top:6px;border-radius:4px;aspect-ratio:auto}
 @keyframes sh{to{background-position:-200% 0}}
-.more{display:flex;justify-content:center;align-items:center;gap:8px;padding:24px 0;color:var(--mut);font-size:12px}
+.more{display:flex;justify-content:center;align-items:center;gap:8px;padding:24px 0;color:var(--mut);font-size:12px;min-height:60px}
 .spin{width:32px;height:32px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:var(--blue);animation:sp .8s linear infinite}
 .spin.small{width:16px;height:16px;border-width:2px}
 @keyframes sp{to{transform:rotate(1turn)}}
-.empty{text-align:center;color:var(--mut);font-size:14px;padding:64px 0}
-.search{width:100%;margin-top:10px;background:rgba(255,255,255,.1);border:0;border-radius:12px;padding:12px 16px;color:#fff;font-size:15px;outline:none;box-shadow:0 0 0 2px transparent}
+.empty{text-align:center;color:var(--mut);font-size:14px;padding:64px 24px;line-height:1.6}
+.empty .big{font-size:34px;display:block;margin-bottom:10px}
+.search{width:100%;margin-top:10px;background:rgba(255,255,255,.1);border:0;border-radius:12px;padding:12px 44px 12px 16px;color:#fff;font-size:16px;outline:none;box-shadow:0 0 0 2px transparent;-webkit-appearance:none}
 .search:focus{box-shadow:0 0 0 2px var(--blue)}
-.search::placeholder{color:#6b6b74}
+.search::placeholder{color:#8f8f99}
+.search::-webkit-search-cancel-button{display:none}
+.search-wrap{position:relative}
+.search-clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#8a8a93}
+.search-clear:active{background:rgba(255,255,255,.1)}
 .status{display:flex;align-items:center;gap:8px;padding:12px 16px;color:var(--mut);font-size:14px}
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:rgba(15,15,20,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid rgba(255,255,255,.08)}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;color:#6b6b74}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:rgba(15,15,20,.82);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;color:#8f8f99}
 .tab svg{width:24px;height:24px}
 .tab span{font-size:10px}
 .tab.on{color:var(--blue)}
+
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px}
+.sec-head h2{font-size:15px;font-weight:700;letter-spacing:-.2px}
+.sec-head button{font-size:12px;color:var(--blue);padding:4px}
+.hrow{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:18px;scrollbar-width:none}
+.hrow::-webkit-scrollbar{display:none}
+.hrow .card{flex:0 0 34%;max-width:130px}
+
 .player{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;flex-direction:column}
 .player.open{display:flex}
-.p-head{display:flex;align-items:center;gap:8px;padding:12px;background:rgba(15,15,20,.78);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.08)}
-.back{display:flex;align-items:center;gap:4px;color:var(--blue);font-weight:500;padding:8px}
+.p-head{display:flex;align-items:center;gap:4px;padding:12px;background:rgba(15,15,20,.82);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.back{display:flex;align-items:center;gap:2px;color:var(--blue);font-weight:500;padding:8px 6px 8px 0;flex:0 0 auto}
 .back svg{width:20px;height:20px}
-.p-title{flex:1;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.p-body{flex:1;overflow-y:auto;padding:16px 16px 64px;scrollbar-width:none}
+.p-title{flex:1;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.p-icon{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:17px;color:#c7c7cf;flex:0 0 auto}
+.p-icon:active{background:rgba(255,255,255,.1)}
+.p-icon.on{color:#ff375f}
+.p-body{flex:1;overflow-y:auto;padding:16px 16px 64px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .p-body::-webkit-scrollbar{display:none}
-.p-wrap{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,.08)}
-.p-wrap iframe{width:100%;height:100%;border:0}
-.p-overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.7);text-align:center;padding:16px}
+.p-wrap{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
+.p-wrap iframe{width:100%;height:100%;border:0;display:block}
+.p-overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.78);text-align:center;padding:16px}
 .p-overlay .txt{font-size:12px;color:#9ca3af;margin-top:8px}
 .p-err-emoji{font-size:30px;margin-bottom:8px}
 .p-err-title{font-size:14px;color:#d1d5db}
-.p-err-sub{font-size:12px;color:#6b6b74;margin-top:4px}
-.voices{display:flex;gap:8px;overflow-x:auto;margin-top:12px;scrollbar-width:none}
+.p-err-sub{font-size:12px;color:#9a9aa3;margin-top:4px}
+.p-err-sub a{color:var(--blue)}
+.p-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.p-actions a,.p-actions button{font-size:12px;color:#d1d5db;background:rgba(255,255,255,.08);border-radius:999px;padding:7px 14px}
+.voices{display:flex;gap:8px;overflow-x:auto;margin-top:12px;scrollbar-width:none;padding-bottom:2px}
 .voices::-webkit-scrollbar{display:none}
-.voice{flex:0 0 auto;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.07);font-size:12px;color:#d1d5db}
-.voice.on{background:var(--blue);color:#fff}
-.meta{margin-top:12px;font-size:12px;color:#6b6b74}
-.desc{margin-top:8px;font-size:14px;line-height:1.55;color:#d1d5db}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:60;background:rgba(44,44,46,.95);padding:8px 16px;border-radius:999px;font-size:14px;max-width:90%;text-align:center}
+.voice{flex:0 0 auto;padding:7px 13px;border-radius:999px;background:rgba(255,255,255,.07);font-size:12px;color:#d1d5db;white-space:nowrap}
+.voice.on{background:var(--blue-btn);color:#fff}
+.p-sub{font-size:11px;color:#6b6b74;margin-top:8px;text-transform:uppercase;letter-spacing:.4px}
+.meta{margin-top:10px;font-size:12px;color:#8a8a93;display:flex;gap:6px;flex-wrap:wrap}
+.meta span{background:rgba(255,255,255,.06);padding:4px 9px;border-radius:8px;color:#b9b9c2}
+.genres{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.genre{font-size:11px;padding:5px 10px;border-radius:999px;background:rgba(10,132,255,.15);color:#7ab8ff}
+.desc{margin-top:14px;font-size:14px;line-height:1.6;color:#cfcfd6;white-space:pre-line}
+.desc.clamp{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.desc-toggle{font-size:12px;color:var(--blue);margin-top:6px;padding:4px 0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:60;background:rgba(44,44,46,.96);padding:8px 16px;border-radius:999px;font-size:14px;max-width:90%;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+
+@media (min-width:900px){
+  .top{padding-left:max(16px,calc((100vw - 1240px)/2));padding-right:max(16px,calc((100vw - 1240px)/2))}
+  .content{max-width:1240px;margin:0 auto}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .hrow .card{flex:0 0 150px;max-width:150px}
+}
 </style>
 </head>
 <body>
@@ -85,19 +131,30 @@ img{display:block}
 <!-- ================= ГЛАВНАЯ ================= -->
 <div id="screen-home">
   <header class="top safe-top">
-    <div class="logo-row"><h1 class="logo">Anime</h1><span class="logo-sub">アニメ.</span></div>
+    <div class="logo-row">
+      <h1 class="logo">Anime</h1><span class="logo-sub">アニメ.</span>
+      <button id="btn-refresh" class="icon-btn" aria-label="Обновить">↻</button>
+    </div>
     <div class="chips">
       <button data-sec="popular" class="sec-chip on">Популярное</button>
       <button data-sec="ongoing" class="sec-chip">Онгоинги</button>
       <button data-sec="fresh"   class="sec-chip">Свежее</button>
       <button data-sec="top"     class="sec-chip">Топ рейтинга</button>
-      <button data-sec="random"  class="sec-chip">🍥</button>
+      <button data-sec="random"  class="sec-chip">🍥 Случайное</button>
     </div>
+    <div class="chips" style="padding-top:2px">
+      <button id="btn-genres" class="chip ghost">Жанры <span id="genre-label" class="cnt"></span></button>
+    </div>
+    <div id="genre-panel" class="genre-panel hidden"></div>
   </header>
   <main class="content">
+    <section id="continue-sec" class="hidden">
+      <div class="sec-head"><h2>Продолжить смотреть</h2><button id="continue-clear">Очистить</button></div>
+      <div id="continue-row" class="hrow"></div>
+    </section>
     <div id="home-grid" class="grid"></div>
-    <div id="home-more" class="more hidden"><div class="spin small"></div>Ещё…</div>
-    <div id="home-empty" class="empty hidden">Ничего не нашлось</div>
+    <div id="home-more" class="more hidden"><div class="spin small"></div><span>Ещё…</span></div>
+    <div id="home-empty" class="empty hidden"><span class="big">🔍</span>Ничего не нашлось</div>
   </main>
 </div>
 
@@ -105,14 +162,35 @@ img{display:block}
 <div id="screen-search" class="hidden">
   <header class="top safe-top">
     <div class="logo-row"><h1 class="logo">Поиск</h1><span class="logo-sub">アニメ.</span></div>
-    <input id="search-input" type="search" class="search" placeholder="Название аниме…" autocomplete="off">
+    <div class="search-wrap">
+      <input id="search-input" type="search" class="search" placeholder="Название аниме…" autocomplete="off" enterkeyhint="search">
+      <button id="search-clear" class="search-clear hidden" aria-label="Очистить">✕</button>
+    </div>
   </header>
   <div id="search-status" class="status hidden"><div class="spin small"></div><span id="search-status-text">Ищем…</span></div>
   <main class="content">
-    <div id="search-hint" class="empty">Введите название — например, «Наруто»</div>
+    <div id="search-hint" class="empty"><span class="big">🍥</span>Введите название — например, «Наруто»</div>
     <div id="search-grid" class="grid"></div>
-    <div id="search-more" class="more hidden"><div class="spin small"></div>Ещё…</div>
-    <div id="search-empty" class="empty hidden">Ничего не нашлось</div>
+    <div id="search-more" class="more hidden"><div class="spin small"></div><span>Ещё…</span></div>
+    <div id="search-empty" class="empty hidden"><span class="big">😕</span>Ничего не нашлось<br><span style="font-size:12px">Попробуйте другое название</span></div>
+  </main>
+</div>
+
+<!-- ================= МОЁ ================= -->
+<div id="screen-my" class="hidden">
+  <header class="top safe-top">
+    <div class="logo-row"><h1 class="logo">Моё</h1><span class="logo-sub">アニメ.</span></div>
+  </header>
+  <main class="content">
+    <div id="my-fav-sec" class="hidden">
+      <div class="sec-head"><h2>Избранное</h2><button id="fav-clear">Очистить</button></div>
+      <div id="fav-grid" class="grid"></div>
+    </div>
+    <div id="my-hist-sec" class="hidden" style="margin-top:24px">
+      <div class="sec-head"><h2>История</h2><button id="hist-clear">Очистить</button></div>
+      <div id="hist-grid" class="grid"></div>
+    </div>
+    <div id="my-empty" class="empty"><span class="big">📺</span>Здесь появятся избранное<br>и то, что вы смотрели</div>
   </main>
 </div>
 
@@ -121,16 +199,24 @@ img{display:block}
   <div class="p-head">
     <button id="btn-back" class="back"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>Назад</button>
     <h2 id="p-title" class="p-title"></h2>
+    <button id="p-fav" class="p-icon" aria-label="В избранное">♡</button>
+    <button id="p-full" class="p-icon" aria-label="На весь экран">⛶</button>
   </div>
   <div class="p-body">
-    <div class="p-wrap">
-      <iframe id="p-iframe" allowfullscreen allow="autoplay; fullscreen"></iframe>
-      <div id="p-loader" class="p-overlay"><div><div class="spin" style="margin:0 auto"></div><div class="txt">Загрузка…</div></div></div>
-      <div id="p-error" class="p-overlay hidden"><div><div class="p-err-emoji">🎬</div><div class="p-err-title">Источник видео не подключён.</div><div class="p-err-sub">Попробуйте другую озвучку.</div></div></div>
+    <div class="p-wrap" id="p-wrap">
+      <iframe id="p-iframe" allowfullscreen allow="autoplay; fullscreen; encrypted-media" referrerpolicy="origin"></iframe>
+      <div id="p-loader" class="p-overlay"><div><div class="spin" style="margin:0 auto"></div><div class="txt">Загрузка видео…</div></div></div>
+      <div id="p-error" class="p-overlay hidden"><div><div class="p-err-emoji">🎬</div><div class="p-err-title">Источник видео не подключён</div><div class="p-err-sub">Попробуйте другую озвучку или откройте в новой вкладке</div></div></div>
+    </div>
+    <div class="p-actions">
+      <a id="p-open" href="#" target="_blank" rel="noopener">Открыть в новой вкладке ↗</a>
+      <button id="p-retry">Перезагрузить</button>
     </div>
     <div id="p-voices" class="voices"></div>
     <div id="p-meta" class="meta"></div>
-    <p id="p-desc" class="desc"></p>
+    <div id="p-genres" class="genres"></div>
+    <p id="p-desc" class="desc clamp"></p>
+    <button id="p-desc-toggle" class="desc-toggle hidden">Читать полностью</button>
   </div>
 </div>
 
@@ -142,29 +228,32 @@ img{display:block}
   <button id="tab-search" class="tab">
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
     <span>Поиск</span></button>
+  <button id="tab-my" class="tab">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+    <span>Моё</span></button>
 </nav>
 
 <div id="toast" class="toast hidden"></div>
 
 <script>
-/* ============ PWA: манифест + Service Worker ============ */
-(function(){
-  const iconUrl = new URL('icon.png', location.href).href;
-  const m = { name:'Anime PWA', short_name:'Anime', start_url:'.', display:'standalone',
-    background_color:'#0b0b0f', theme_color:'#0b0b0f',
-    icons:[{src:iconUrl,sizes:'192x192',type:'image/png',purpose:'any'},{src:iconUrl,sizes:'512x512',type:'image/png'}] };
-  document.getElementById('manifest-link').href =
-    URL.createObjectURL(new Blob([JSON.stringify(m)], { type:'application/manifest+json' }));
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol))
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-})();
+'use strict';
 
-/* ============ КОНФИГ ============ */
-const OWN_PROXY = '';
-const SHIKI = 'https://shikimori.one';
+/* ============================================================
+   PWA
+   ============================================================ */
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol))
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+
+/* ============================================================
+   КОНФИГ
+   ============================================================ */
+const $ = id => document.getElementById(id);
 const KODIK = 'https://kodik-api.com';
-const LIMIT = 30, TTL = 10*60*1000, CAP = 300;
+const PAGE_LIMIT = 100;         // Kodik отдаёт одну строку на озвучку — берём с запасом
+const TTL = 15 * 60 * 1000;     // время жизни кеша подборок
 
+/* Токены Kodik зашифрованы (перевёрнутая перестановка base64).
+   Невалидные отбрасываются при расшифровке. */
 const ENC_TOKENS = [
   "==QO0ADM3kTZmRTNiRDNjFDM==QOxkDMzQjZ4ADZ4zNhZTN",
   "==QNyE2NzIjM4ETM3MmNklDM==gY5EzNxIzY0gjZ1kDZkFDN",
@@ -173,429 +262,1005 @@ const ENC_TOKENS = [
 ];
 function decryptToken(t){
   try{
-    const h = Math.floor(t.length/2);
-    const a = t.substring(0,h).split('').reverse().join('');
+    const h = Math.floor(t.length / 2);
+    const a = t.substring(0, h).split('').reverse().join('');
     const b = t.substring(h).split('').reverse().join('');
     return atob(b) + atob(a);
-  }catch(e){ return null; }
+  }catch(e){ return ''; }
 }
-const TOKENS = ENC_TOKENS.map(decryptToken).filter(Boolean);
-let KODIK_TOKEN = '', tokenPromise = null;
-function ensureToken(){
-  if (KODIK_TOKEN) return Promise.resolve(true);
-  if (tokenPromise) return tokenPromise;
-  let cached = null; try{ cached = localStorage.getItem('kodik_token'); }catch(e){}
-  if (cached){ KODIK_TOKEN = cached; return Promise.resolve(true); }
-  return tokenPromise = (async () => {
-    for (const t of TOKENS){
-      KODIK_TOKEN = t;
-      const r = await kodik('search', { shikimori_id:'20', limit:'1' });
-      if (r && Array.isArray(r.results) && r.results.length){
-        try{ localStorage.setItem('kodik_token', t); }catch(e){}
-        return true;
-      }
-    }
-    KODIK_TOKEN = TOKENS[0] || '';
-    return false;
-  })();
+const TOKENS = ENC_TOKENS.map(decryptToken).filter(t => /^[0-9a-f]{32}$/.test(t));
+
+const GENRES = ['боевик','комедия','фэнтези','романтика','драма','детектив','приключения','фантастика',
+  'сёнен','сёдзё','сэйнэн','дзёсэй','меха','спорт','музыка','ужасы','мистика','повседневность',
+  'школа','исэкай','пародия','суперсила','вампиры','демоны','военное','исторический','космос',
+  'магия','психологическое','триллер','гарем','киберпанк','самураи','детское'];
+
+/* ============================================================
+   УТИЛИТЫ
+   ============================================================ */
+const LS = {
+  get(k, def){
+    try{ const v = JSON.parse(localStorage.getItem('anime_' + k)); return v == null ? def : v; }
+    catch(e){ return def; }
+  },
+  set(k, v){ try{ localStorage.setItem('anime_' + k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem('anime_' + k); }catch(e){} }
+};
+
+function toast(msg){
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.add('hidden'), 2400);
 }
 
-/* ============ FETCH: ГОНКА ПРОКСИ (параллельно, быстрый побеждает) ============ */
-const RACE = [
-  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
-  u => 'https://corsproxy.io/?url=' + encodeURIComponent(u)
-];
-const FALLBACK = [
-  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)
-];
-const anyP = Promise.any ? Promise.any.bind(Promise) : ps => new Promise((res, rej) => {
-  let n = 0; ps.forEach(p => p.then(res, () => { if (++n === ps.length) rej(new Error('all failed')); }));
-});
-function via(u, timeout){
+async function getJSON(url, ms = 9000){
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeout);
-  return fetch(u, { signal: ctrl.signal })
-    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-    .then(txt => { clearTimeout(t); return JSON.parse(txt); })
-    .catch(e => { clearTimeout(t); throw e; });
-}
-async function fetchJSON(url, timeout = 6500){
-  if (OWN_PROXY){ try{ return await via(OWN_PROXY + encodeURIComponent(url), timeout); }catch(e){} }
-  try{ return await anyP(RACE.map(w => via(w(url), timeout))); }catch(e){}
-  for (const w of FALLBACK){ try{ return await via(w(url), timeout); }catch(e){} }
-  throw new Error('proxy failed');
-}
-async function shiki(path, params = {}){
-  try{ return await fetchJSON(`${SHIKI}/api/${path}?` + new URLSearchParams(params)); }catch(e){ return null; }
-}
-async function kodik(path, params = {}){
-  if (!KODIK_TOKEN) return null;
-  try{ return await fetchJSON(`${KODIK}/${path}?` + new URLSearchParams({ token: KODIK_TOKEN, ...params })); }catch(e){ return null; }
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try{
+    const r = await fetch(url, { signal: ctrl.signal, credentials: 'omit' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-/* ============ НОРМАЛИЗАЦИЯ ============ */
-const normShiki = a => {
-  const img = a.image || a.poster;
-  return { sid: a.id, title: a.russian || a.name,
-    poster: img ? SHIKI + (img.preview || img.original) : null,
-    posterFull: img ? SHIKI + img.original : null,
-    score: a.score, kind: a.kind, year: (a.aired_on || '').slice(0,4),
-    desc: a.description || '', genres: (a.genres||[]).map(g=>g.russian) };
-};
-const normKodik = r => {
+const qs = obj => new URLSearchParams(obj).toString();
+const absUrl = u => !u ? '' : (u.startsWith('//') ? 'https:' + u : u);
+const num = v => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : 0; };
+const uniq = a => [...new Set(a)];
+
+function stripTags(s){
+  return String(s || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+const KIND = { 'tv':'ТВ-сериал', 'movie':'Фильм', 'ova':'OVA', 'ona':'ONA', 'special':'Спешл', 'anime-serial':'Сериал' };
+
+/* ============================================================
+   API KODIK (напрямую, CORS открыт)
+   ============================================================ */
+let tokenIdx = 0;
+
+async function api(path, params = {}){
+  if (!TOKENS.length) return null;
+  for (let i = 0; i < TOKENS.length; i++){
+    const idx = (tokenIdx + i) % TOKENS.length;
+    let data = null;
+    try{
+      data = await getJSON(KODIK + '/' + path + '?' + qs({ token: TOKENS[idx], ...params }));
+    }catch(e){
+      continue; // битый токен / сеть — пробуем следующий
+    }
+    if (data && Array.isArray(data.results)){
+      tokenIdx = idx;
+      return data;
+    }
+    if (data && (data.error || data.message)) continue;
+  }
+  return null;
+}
+
+/* next_page -> курсор "next", чтобы не тащить чужой токен в URL */
+function cursorOf(nextPage){
+  if (!nextPage) return null;
+  try{ return new URL(nextPage).searchParams.get('next'); }catch(e){ return null; }
+}
+
+const listParams = extra => ({ limit: PAGE_LIMIT, types: 'anime,anime-serial', with_material_data: 'true', ...extra });
+
+/* ============================================================
+   НОРМАЛИЗАЦИЯ
+   ============================================================ */
+function keyOf(r){
+  if (r.shikimori_id) return 's' + r.shikimori_id;
+  const base = (r.title_orig || r.title || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  return base + '|' + (r.year || '');
+}
+
+function qualityRank(q){
+  const s = String(q || '');
+  if (/2160|4k/i.test(s)) return 4;
+  if (/1080/.test(s)) return 3;
+  if (/720/.test(s)) return 2;
+  if (/480/.test(s)) return 1;
+  return 0;
+}
+
+function normalize(r){
   const md = r.material_data || {};
-  let poster = md.poster_url || md.anime_poster_url || null;
-  if (poster && poster.startsWith('//')) poster = 'https:' + poster;
-  return { sid: r.shikimori_id || null, title: md.title || r.title, poster, posterFull: poster,
-    score: md.shikimori_rating || null, kind: md.anime_kind || r.type, year: r.year || md.year,
-    desc: md.description || md.anime_description || '', genres: md.all_genres || [],
-    voice: (r.translation && r.translation.title) || null, quality: r.quality || null,
-    kodikLink: r.link };
-};
+  let poster = md.poster_url || md.anime_poster_url || '';
+  let posterAlt = md.anime_poster_url || md.poster_url || '';
+  poster = absUrl(poster); posterAlt = absUrl(posterAlt);
+  if (posterAlt === poster) posterAlt = '';
+  const genres = uniq((md.all_genres || []).map(g => String(g).toLowerCase()))
+    .filter(g => g && g !== 'аниме' && g !== 'мультфильм');
+  return {
+    key: keyOf(r),
+    sid: r.shikimori_id || null,
+    title: r.title || md.title || r.title_orig || 'Без названия',
+    orig: r.title_orig || '',
+    poster, posterAlt,
+    year: r.year || md.year || '',
+    rating: num(md.shikimori_rating) || num(md.kinopoisk_rating) || 0,
+    kind: KIND[md.anime_kind || r.type] || 'Аниме',
+    status: md.anime_status || '',
+    episodes: md.episodes_total || r.episodes_count || 0,
+    duration: md.duration || 0,
+    minAge: md.minimal_age || 0,
+    desc: stripTags(md.description || md.anime_description || ''),
+    genres: genres.slice(0, 8),
+    voices: []
+  };
+}
+
+function voiceOf(r){
+  return {
+    id: r.id,
+    translation: (r.translation && r.translation.title) || 'Оригинал',
+    quality: r.quality || '',
+    link: absUrl(r.link),
+    episodes: r.episodes_count || 0,
+    last: r.last_episode || 0
+  };
+}
+
+function groupResults(results){
+  const map = new Map();
+  for (const r of results || []){
+    const k = keyOf(r);
+    let g = map.get(k);
+    if (!g){
+      g = { raw: r };
+      map.set(k, g);
+    }else if (!g.raw.material_data && r.material_data){
+      g.raw = r;
+    }
+    if (!g.voices) g.voices = [];
+    const v = voiceOf(r);
+    if (v.link && !g.voices.some(x => x.link === v.link)) g.voices.push(v);
+  }
+  const out = [];
+  for (const g of map.values()){
+    const item = normalize(g.raw);
+    item.voices = (g.voices || []).sort((a, b) =>
+      qualityRank(b.quality) - qualityRank(a.quality) || a.translation.localeCompare(b.translation));
+    out.push(item);
+  }
+  return out;
+}
+
+/* ============================================================
+   КЕШ ПОДБОРОК
+   ============================================================ */
+function cacheGet(k){
+  const c = LS.get('c_' + k, null);
+  if (!c || !c.items || c.items.length < 6) return null;
+  if (Date.now() - (c.t || 0) > TTL) return null;
+  return c;
+}
+function cacheSet(k, items, next){
+  LS.set('c_' + k, { t: Date.now(), items: items.slice(0, 60), next: next || null });
+}
+
+/* ============================================================
+   КАРТОЧКИ
+   ============================================================ */
 function imgErr(im){
-  const alt = im.getAttribute('data-alt');
-  if (alt && im.src !== alt){ im.removeAttribute('data-alt'); im.src = alt; return; }
+  const alt = im.dataset.alt;
+  if (alt && im.src !== alt){
+    delete im.dataset.alt;
+    im.src = alt;
+    return;
+  }
   const d = document.createElement('div');
-  d.className = 'ph'; d.textContent = '🎬';
+  d.className = 'ph';
+  d.textContent = '🎬';
   im.replaceWith(d);
 }
 
-/* ============ СЕКЦИИ ============ */
-const SECTIONS = {
-  popular: { shiki:{order:'popularity', kind:'tv'},
-             kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true', sort:'shikimori_rating', order:'desc'} },
-  ongoing: { shiki:{order:'popularity', status:'ongoing', kind:'tv'},
-             kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true', anime_status:'ongoing'} },
-  fresh:   { shiki:null,
-             kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true', sort:'updated_at', order:'desc'} },
-  top:     { shiki:{order:'score', kind:'tv'},
-             kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true', sort:'shikimori_rating', order:'desc'} },
-  random:  { shiki:{order:'random', kind:'tv'},
-             kodik:{limit:LIMIT, types:'anime,anime-serial', with_material_data:'true'} }
-};
+function cardEl(it, opts = {}){
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'card';
 
-/* ============ ХРАНИЛИЩЕ ============ */
-const LS = {
-  get(k){ try{ return JSON.parse(localStorage.getItem('anime_' + k)); }catch(e){ return null; } },
-  set(k,v){ try{ localStorage.setItem('anime_' + k, JSON.stringify(v)); }catch(e){} }
-};
-const $ = id => document.getElementById(id);
-const freshState = () => ({ items:[], keys:new Set(), page:1, nextUrl:null, done:false, source:null, rendered:0, loading:false });
-const saveState = (key, f) => LS.set(key, { t:Date.now(), items:f.items.slice(0,CAP), page:f.page, nextUrl:f.nextUrl, done:f.done, source:f.source });
-
-const home = { sec:'popular' };
-let homeState = null, homeReq = 0;
-
-async function loadHome(sec){
-  const my = ++homeReq;
-  home.sec = sec;
-  const cached = LS.get('sec_' + sec);
-  if (cached && cached.items && cached.items.length){
-    homeState = { ...freshState(), items:cached.items,
-      keys:new Set(cached.items.map(i => i.sid || i.title)),
-      page:cached.page || 1, nextUrl:cached.nextUrl || null, done:!!cached.done, source:cached.source || null };
-    $('home-grid').innerHTML = '';
-    appendCards($('home-grid'), homeState.items, 0);
-    homeState.rendered = homeState.items.length;
-    $('home-empty').classList.add('hidden');
-    if (Date.now() - (cached.t || 0) < TTL) return;
-    refreshHome(sec, my);
-    return;
+  const poster = document.createElement('div');
+  poster.className = 'poster';
+  if (it.poster){
+    const img = document.createElement('img');
+    img.src = it.poster;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    if (it.posterAlt) img.dataset.alt = it.posterAlt;
+    img.addEventListener('error', () => imgErr(img));
+    poster.appendChild(img);
+  }else{
+    const ph = document.createElement('div');
+    ph.className = 'ph';
+    ph.textContent = '🎬';
+    poster.appendChild(ph);
   }
-  homeState = freshState();
-  skeleton($('home-grid'));
-  await fetchChunk(homeState, sec);
-  if (my !== homeReq) return;
-  $('home-grid').innerHTML = '';
-  appendCards($('home-grid'), homeState.items, 0);
-  homeState.rendered = homeState.items.length;
-  $('home-empty').classList.toggle('hidden', homeState.items.length > 0);
-  if (homeState.items.length) saveState('sec_' + sec, homeState);
-  idlePrefetch();
-}
-
-async function refreshHome(sec, my){
-  const f = freshState();
-  await fetchChunk(f, sec);
-  if (f.items.length) saveState('sec_' + sec, f);
-  if (my !== homeReq) return;
-  if (window.scrollY < 400 && homeState.rendered === homeState.items.length && f.items.length){
-    homeState = f;
-    $('home-grid').innerHTML = '';
-    appendCards($('home-grid'), f.items, 0);
-    f.rendered = f.items.length;
+  if (it.rating){
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = '★ ' + it.rating.toFixed(1);
+    poster.appendChild(badge);
   }
-}
-
-async function fetchChunk(f, sec){
-  if (!f || f.loading) return;
-  f.loading = true;
-  const isAppend = f.rendered > 0;
-  if (isAppend) $('home-more').classList.remove('hidden');
-  const cfg = SECTIONS[sec];
-  let got = [];
-  if (f.source === 'shiki'){
-    const s = await shiki('animes', Object.assign({}, cfg.shiki, { limit:LIMIT, page:f.page }));
-    if (Array.isArray(s) && s.length){ got = s.map(normShiki); f.page++; if (s.length < LIMIT) f.done = true; }
-    else f.done = true;
-  } else if (f.source === 'kodik'){
-    if (f.nextUrl){
-      let k = null; try{ k = await fetchJSON(f.nextUrl); }catch(e){}
-      if (k && k.results && k.results.length){ got = k.results.map(normKodik); f.nextUrl = k.next_page || null; if (!f.nextUrl) f.done = true; }
-      else f.done = true;
-    } else f.done = true;
-  } else {
-    if (cfg.shiki){
-      const s = await shiki('animes', Object.assign({}, cfg.shiki, { limit:LIMIT, page:1 }));
-      if (Array.isArray(s) && s.length){ got = s.map(normShiki); f.source = 'shiki'; f.page = 2; if (s.length < LIMIT) f.done = true; }
-    }
-    if (!got.length){
-      await ensureToken();
-      const k = await kodik('list', cfg.kodik);
-      if (k && k.results && k.results.length){ got = k.results.map(normKodik); f.source = 'kodik'; f.nextUrl = k.next_page || null; if (!f.nextUrl) f.done = true; }
-      else f.done = true;
-    }
+  if (it.status === 'ongoing'){
+    const nb = document.createElement('span');
+    nb.className = 'badge new';
+    nb.textContent = 'ON';
+    poster.appendChild(nb);
   }
-  const before = f.items.length;
-  got.forEach(it => { const k = it.sid || it.title; if (!f.keys.has(k)){ f.keys.add(k); f.items.push(it); } });
-  if (isAppend && f.items.length === before) f.done = true;
-  f.loading = false;
-  $('home-more').classList.add('hidden');
-}
+  b.appendChild(poster);
 
-async function loadHomeMore(){
-  const f = homeState;
-  if (!f || f.loading || f.done) return;
-  const my = homeReq;
-  const old = f.rendered;
-  await fetchChunk(f, home.sec);
-  if (my !== homeReq) return;
-  appendCards($('home-grid'), f.items.slice(old), old);
-  f.rendered = f.items.length;
-  saveState('sec_' + home.sec, f);
-}
+  const t = document.createElement('div');
+  t.className = 'ctitle';
+  t.textContent = it.title;
+  b.appendChild(t);
 
-/* Фоновый предзагруз секций в idle-время */
-const prefetched = {};
-function idle(fn){ ('requestIdleCallback' in window) ? requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 1500); }
-function idlePrefetch(){
-  idle(() => { prefetchSec('ongoing'); prefetchSec('top'); });
-}
-function prefetchSec(sec){
-  if (prefetched[sec]) return; prefetched[sec] = 1;
-  const c = LS.get('sec_' + sec);
-  if (c && Date.now() - (c.t || 0) < TTL) return;
-  const f = freshState();
-  fetchChunk(f, sec).then(() => { if (f.items.length) saveState('sec_' + sec, f); });
-}
-
-/* ============ ПОИСК (с кешем последнего запроса) ============ */
-let searchState = null, searchReq = 0, searchCache = null, searchTimer;
-
-function restoreSearch(f){
-  searchState = { ...freshState(), q:f.q, items:f.items, keys:new Set(f.items.map(i => i.sid || i.title)),
-    page:f.page || 1, nextUrl:f.nextUrl || null, done:!!f.done, source:f.source || null };
-  $('search-grid').innerHTML = '';
-  appendCards($('search-grid'), searchState.items, 0);
-  searchState.rendered = searchState.items.length;
-  $('search-hint').classList.add('hidden');
-  $('search-empty').classList.add('hidden');
-  searchStatus(null);
-}
-
-async function doSearch(q, append = false){
-  const my = ++searchReq;
-  if (!append){
-    if (searchCache && searchCache.q === q && searchCache.items.length){ restoreSearch(searchCache); return; }
-    const ls = LS.get('q');
-    if (ls && ls.q === q && ls.items && ls.items.length && Date.now() - (ls.t || 0) < TTL){
-      searchCache = ls; restoreSearch(ls); return;
-    }
-    searchState = { q, ...freshState() };
-    $('search-hint').classList.add('hidden');
-    $('search-empty').classList.add('hidden');
-    skeleton($('search-grid'), 6);
-    searchStatus('Ищем «' + q + '»…');
+  const sub = [it.year || '', it.episodes ? it.episodes + ' эп.' : ''].filter(Boolean).join(' · ');
+  if (sub && !opts.noSub){
+    const s = document.createElement('div');
+    s.className = 'csub';
+    s.textContent = sub;
+    b.appendChild(s);
   }
-  await fetchSearchChunk(q);
-  if (my !== searchReq) return;
-  searchStatus(null);
-  const old = searchState.rendered;
-  if (!append) $('search-grid').innerHTML = '';
-  appendCards($('search-grid'), searchState.items.slice(append ? old : 0), append ? old : 0);
-  searchState.rendered = searchState.items.length;
-  $('search-empty').classList.toggle('hidden', searchState.items.length > 0);
-  if (searchState.items.length){ searchCache = searchState; LS.set('q', { t:Date.now(), q, items:searchState.items.slice(0,90), page:searchState.page, done:searchState.done, source:searchState.source }); }
+
+  b.addEventListener('click', () => openPlayer(it));
+  return b;
 }
 
-async function fetchSearchChunk(q){
-  const f = searchState;
-  if (!f || f.loading) return;
-  f.loading = true;
-  if (f.rendered > 0) $('search-more').classList.remove('hidden');
-  let got = [];
-  if (f.source === 'shiki'){
-    const s = await shiki('animes', { search:q, limit:LIMIT, page:f.page });
-    if (Array.isArray(s) && s.length){ got = s.map(normShiki); f.page++; if (s.length < LIMIT) f.done = true; }
-    else f.done = true;
-  } else {
-    const s = await shiki('animes', { search:q, limit:LIMIT, page:1 });
-    if (Array.isArray(s) && s.length){ got = s.map(normShiki); f.source = 'shiki'; f.page = 2; if (s.length < LIMIT) f.done = true; }
-    if (!got.length){
-      await ensureToken();
-      const k = await kodik('search', { title:q, limit:LIMIT, types:'anime,anime-serial', with_material_data:'true' });
-      if (k && k.results && k.results.length){ got = k.results.map(normKodik); f.source = 'kodik'; f.done = true; }
-      else f.done = true;
-    }
-  }
-  const before = f.items.length;
-  got.forEach(it => { const k = it.sid || it.title; if (!f.keys.has(k)){ f.keys.add(k); f.items.push(it); } });
-  if (f.rendered > 0 && f.items.length === before) f.done = true;
-  f.loading = false;
-  $('search-more').classList.add('hidden');
-}
-
-async function loadSearchMore(){
-  const f = searchState;
-  if (!f || f.loading || f.done) return;
-  if ($('search-input').value.trim() !== f.q) return;
-  const my = searchReq, old = f.rendered;
-  await fetchSearchChunk(f.q);
-  if (my !== searchReq) return;
-  appendCards($('search-grid'), f.items.slice(old), old);
-  f.rendered = f.items.length;
-}
-
-/* ============ UI ============ */
-function toast(m){ const el = $('toast'); el.textContent = m; el.classList.remove('hidden');
-  clearTimeout(el._t); el._t = setTimeout(() => el.classList.add('hidden'), 2500); }
-function searchStatus(msg){ const el = $('search-status');
-  el.classList.toggle('hidden', !msg);
-  if (msg) $('search-status-text').textContent = msg; }
 function skeleton(grid, n = 12){
   let h = '';
   for (let i = 0; i < n; i++) h += '<div><div class="skel"></div><div class="skel skel-line"></div></div>';
   grid.innerHTML = h;
 }
 
-function appendCards(grid, arr, startIdx){
-  arr.forEach((it, i) => {
+function renderInto(grid, items, opts){
+  grid.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  items.forEach(it => frag.appendChild(cardEl(it, opts)));
+  grid.appendChild(frag);
+}
+
+/* ============================================================
+   ГЛАВНАЯ
+   ============================================================ */
+const home = {
+  sec: 'popular', genre: '',
+  items: [], keys: new Set(),
+  next: null, done: false, loading: false, req: 0
+};
+
+function sectionParams(sec, genre){
+  const base = { sort: 'shikimori_rating', order: 'desc' };
+  const p = {
+    popular: base,
+    top:     { sort: 'shikimori_rating', order: 'desc' },
+    ongoing: { sort: 'shikimori_rating', order: 'desc', anime_status: 'ongoing' },
+    fresh:   { sort: 'updated_at', order: 'desc' }
+  }[sec] || base;
+  const params = listParams(p);
+  if (genre) params.genres = genre;
+  return params;
+}
+
+async function loadHome(reset = true){
+  if (reset){
+    home.req++;
+    home.items = []; home.keys = new Set(); home.next = null;
+    home.done = false; home.loading = true;
+    skeleton($('home-grid'));
+    $('home-empty').classList.add('hidden');
+    $('home-empty').innerHTML = '<span class="big">🔍</span>Ничего не нашлось';
+    $('home-more').classList.add('hidden');
+  }else if (home.loading){
+    return;
+  }
+
+  const my = home.req;
+
+  if (home.sec === 'random'){
+    const items = await loadRandom(home.genre);
+    if (my !== home.req) return;
+    home.loading = false;
+    home.items = items; home.done = true;
+    renderInto($('home-grid'), items);
+    $('home-empty').classList.toggle('hidden', items.length > 0);
+    return;
+  }
+
+  const cached = reset ? cacheGet(home.sec + '|' + home.genre) : null;
+  if (cached){
+    home.items = cached.items;
+    home.keys = new Set(cached.items.map(i => i.key));
+    home.next = cached.next || null;
+    home.done = !cached.next;
+    home.loading = false;
+    renderInto($('home-grid'), cached.items);
+    refreshHome(my);
+    return;
+  }
+
+  const chunk = await fetchListChunk(home.sec, home.genre, null, 4, 24);
+  if (my !== home.req) return;
+  home.loading = false;
+  if (!chunk){ homeFail(); return; }
+
+  const items = chunk.items;
+  home.items = items;
+  home.keys = new Set(items.map(i => i.key));
+  home.next = chunk.next;
+  home.done = chunk.done;
+
+  renderInto($('home-grid'), items);
+  $('home-empty').classList.toggle('hidden', items.length > 0);
+  if (items.length) cacheSet(home.sec + '|' + home.genre, items, chunk.next);
+}
+
+/* Забирает несколько страниц API и схлопывает дубли озвучек.
+   Возвращает уникальные тайтлы и курсор следующей страницы. */
+async function fetchListChunk(sec, genre, startNext, maxPages, target){
+  let next = startNext || null;
+  let pages = 0, got = false;
+  const seen = new Set(), items = [];
+
+  while (pages < maxPages && items.length < target){
+    const params = { ...sectionParams(sec, genre), ...(next ? { next } : {}) };
+    const res = await api('list', params);
+    pages++;
+    if (!res) break;
+    got = true;
+    groupResults(res.results).forEach(it => {
+      if (seen.has(it.key)) return;
+      seen.add(it.key);
+      items.push(it);
+    });
+    next = cursorOf(res.next_page);
+    if (!next) break;
+  }
+  if (!got) return null;
+  return { items, next, done: !next };
+}
+
+function homeFail(){
+  $('home-grid').innerHTML = '';
+  $('home-empty').classList.remove('hidden');
+  $('home-empty').innerHTML = '<span class="big">📡</span>Не удалось загрузить каталог<br><span style="font-size:12px">Проверьте интернет и обновите ↻</span>';
+}
+
+/* фон-обновление кешированной подборки */
+async function refreshHome(my){
+  const chunk = await fetchListChunk(home.sec, home.genre, null, 2, 16);
+  if (!chunk || my !== home.req) return;
+  const fresh = chunk.items;
+  if (!fresh.length) return;
+  cacheSet(home.sec + '|' + home.genre, fresh, chunk.next);
+  if (home.items.length && home.items[0].key === fresh[0].key) return;
+
+  // не теряем уже показанные карточки, просто ставим свежие вперёд
+  const freshKeys = new Set(fresh.map(i => i.key));
+  const merged = fresh.concat(home.items.filter(i => !freshKeys.has(i.key)));
+  home.items = merged;
+  home.keys = new Set(merged.map(i => i.key));
+  if (window.scrollY < 300) renderInto($('home-grid'), merged);
+}
+
+async function loadHomeMore(){
+  if (home.loading || home.done || home.sec === 'random') return;
+  const my = home.req;
+  home.loading = true;
+  $('home-more').classList.remove('hidden');
+
+  const chunk = await fetchListChunk(home.sec, home.genre, home.next, 3, 18);
+  home.loading = false;
+  if (my !== home.req) return;
+  $('home-more').classList.add('hidden');
+  if (!chunk){ home.done = true; return; }
+
+  const fresh = chunk.items.filter(i => !home.keys.has(i.key));
+  fresh.forEach(i => home.keys.add(i.key));
+  home.next = chunk.next;
+  home.done = chunk.done;
+  if (!fresh.length && home.done) return;
+
+  const frag = document.createDocumentFragment();
+  fresh.forEach(i => { home.items.push(i); frag.appendChild(cardEl(i)); });
+  $('home-grid').appendChild(frag);
+}
+
+async function loadRandom(genre){
+  const items = [];
+  const seen = new Set();
+  for (let attempt = 0; attempt < 2 && items.length < 12; attempt++){
+    const year = 1990 + Math.floor(Math.random() * 37);
+    const res = await api('list', listParams({
+      sort: 'shikimori_rating', order: 'desc',
+      year: String(year),
+      ...(genre ? { genres: genre } : {})
+    }));
+    groupResults(res && res.results).forEach(it => {
+      if (seen.has(it.key)) return;
+      seen.add(it.key);
+      items.push(it);
+    });
+  }
+  if (!items.length){
+    const res = await api('list', listParams({ sort: 'views', order: 'desc', ...(genre ? { genres: genre } : {}) }));
+    groupResults(res && res.results).forEach(it => {
+      if (seen.has(it.key)) return;
+      seen.add(it.key);
+      items.push(it);
+    });
+  }
+  for (let i = items.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+
+function buildGenrePanel(){
+  const panel = $('genre-panel');
+  panel.innerHTML = '';
+  const all = document.createElement('button');
+  all.className = 'chip' + (home.genre ? '' : ' on');
+  all.textContent = 'Все';
+  all.onclick = () => selectGenre('');
+  panel.appendChild(all);
+  GENRES.forEach(g => {
     const b = document.createElement('button');
-    b.className = 'card';
-    b.onclick = () => openPlayer(it);
-    const hi = (startIdx + i) < 9 ? ' fetchpriority="high"' : '';
-    b.innerHTML = `
-      <div class="poster">
-        ${it.poster
-          ? `<img src="${it.poster}" ${it.posterFull && it.posterFull !== it.poster ? `data-alt="${it.posterFull}"` : ''} loading="lazy" decoding="async"${hi} onerror="imgErr(this)">`
-          : '<div class="ph">🎬</div>'}
-        ${it.score ? `<span class="badge">★ ${it.score}</span>` : ''}
-      </div>
-      <div class="ctitle">${it.title}</div>`;
-    grid.appendChild(b);
+    b.className = 'chip' + (home.genre === g ? ' on' : '');
+    b.textContent = g;
+    b.onclick = () => selectGenre(g);
+    panel.appendChild(b);
   });
 }
 
-function setTab(name){
-  const h = name === 'home';
-  $('screen-home').classList.toggle('hidden', !h);
-  $('screen-search').classList.toggle('hidden', h);
-  $('tab-home').classList.toggle('on', h);
-  $('tab-search').classList.toggle('on', !h);
-  if (!h) setTimeout(() => $('search-input').focus(), 60);
+function selectGenre(g){
+  home.genre = g;
+  $('genre-label').textContent = g ? '· ' + g : '';
+  $('btn-genres').classList.toggle('on', !!g);
+  $('genre-panel').classList.add('hidden');
+  buildGenrePanel();
+  loadHome(true);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ============ ПЛЕЕР ============ */
-async function openPlayer(item){
+/* ============================================================
+   ПОИСК
+   ============================================================ */
+const search = { q: '', items: [], keys: new Set(), next: null, done: false, loading: false, req: 0, timer: null };
+
+async function doSearch(q, more = false){
+  if (!q){ resetSearch(); return; }
+  if (!more){
+    search.req++;
+    search.q = q;
+    search.items = []; search.keys = new Set(); search.next = null; search.done = false;
+    $('search-empty').classList.add('hidden');
+    $('search-hint').classList.add('hidden');
+    skeleton($('search-grid'), 6);
+    setSearchStatus('Ищем «' + q + '»…');
+  }
+  if (search.loading) return;
+  const my = search.req;
+  search.loading = true;
+
+  // добираем страницы, пока не наберём достаточно уникальных тайтлов
+  let pages = 0, added = 0;
+  while (pages < 4 && !search.done && added < 12){
+    const res = await api('search', {
+      title: q, limit: PAGE_LIMIT,
+      types: 'anime,anime-serial', with_material_data: 'true',
+      ...(search.next ? { next: search.next } : {})
+    });
+    pages++;
+    if (!res){ search.done = true; break; }
+    const groups = groupResults(res.results).filter(i => !search.keys.has(i.key));
+    groups.forEach(i => { search.keys.add(i.key); search.items.push(i); });
+    added += groups.length;
+    search.next = cursorOf(res.next_page);
+    if (!search.next) search.done = true;
+  }
+
+  search.loading = false;
+  if (my !== search.req) return;
+
+  setSearchStatus(null);
+  const start = more ? $('search-grid').children.length : 0;
+  if (!more) $('search-grid').innerHTML = '';
+  const frag = document.createDocumentFragment();
+  search.items.slice(start).forEach(i => frag.appendChild(cardEl(i)));
+  $('search-grid').appendChild(frag);
+  $('search-empty').classList.toggle('hidden', search.items.length > 0);
+  $('search-more').classList.add('hidden');
+
+  if (!search.items.length && !search.loading && search.done)
+    $('search-empty').classList.remove('hidden');
+}
+
+function resetSearch(){
+  search.req++;
+  search.q = ''; search.items = []; search.keys = new Set();
+  search.next = null; search.done = false; search.loading = false;
+  $('search-grid').innerHTML = '';
+  $('search-empty').classList.add('hidden');
+  $('search-more').classList.add('hidden');
+  setSearchStatus(null);
+  $('search-hint').classList.remove('hidden');
+}
+
+async function loadSearchMore(){
+  if (!search.q || search.loading || search.done) return;
+  $('search-more').classList.remove('hidden');
+  await doSearch(search.q, true);
+}
+
+function setSearchStatus(msg){
+  const el = $('search-status');
+  el.classList.toggle('hidden', !msg);
+  if (msg) $('search-status-text').textContent = msg;
+}
+
+/* ============================================================
+   ИСТОРИЯ / ИЗБРАННОЕ
+   ============================================================ */
+let watched = LS.get('hist', []);
+let favs = LS.get('fav', []);
+
+const slim = it => ({
+  key: it.key, sid: it.sid, title: it.title, orig: it.orig,
+  poster: it.poster, posterAlt: it.posterAlt, year: it.year,
+  rating: it.rating, kind: it.kind, episodes: it.episodes,
+  status: it.status, desc: it.desc, genres: it.genres
+});
+
+function addHistory(it){
+  watched = watched.filter(x => x.key !== it.key);
+  watched.unshift(slim(it));
+  watched = watched.slice(0, 30);
+  LS.set('hist', watched);
+  renderHistoryRow();
+}
+
+function isFav(key){ return favs.some(x => x.key === key); }
+
+function toggleFav(it){
+  if (isFav(it.key)) favs = favs.filter(x => x.key !== it.key);
+  else { favs.unshift(slim(it)); favs = favs.slice(0, 100); }
+  LS.set('fav', favs);
+  return isFav(it.key);
+}
+
+function renderHistoryRow(){
+  const sec = $('continue-sec');
+  const row = $('continue-row');
+  row.innerHTML = '';
+  if (!watched.length){ sec.classList.add('hidden'); return; }
+  sec.classList.remove('hidden');
+  watched.slice(0, 12).forEach(it => row.appendChild(cardEl(it, { noSub: false })));
+}
+
+function renderMy(){
+  const favSec = $('my-fav-sec'), histSec = $('my-hist-sec'), empty = $('my-empty');
+  $('fav-grid').innerHTML = '';
+  $('hist-grid').innerHTML = '';
+  favSec.classList.toggle('hidden', !favs.length);
+  histSec.classList.toggle('hidden', !watched.length);
+  empty.classList.toggle('hidden', !!(favs.length || watched.length));
+  const f = document.createDocumentFragment();
+  favs.forEach(it => f.appendChild(cardEl(it)));
+  $('fav-grid').appendChild(f);
+  const h = document.createDocumentFragment();
+  watched.forEach(it => h.appendChild(cardEl(it)));
+  $('hist-grid').appendChild(h);
+}
+
+/* ============================================================
+   ПЛЕЕР
+   ============================================================ */
+let current = null;
+let loadTimer = null;
+let playingLink = '';
+
+async function openPlayer(it){
+  current = it;
   $('player').classList.add('open');
   document.body.style.overflow = 'hidden';
-  $('p-title').textContent = item.title;
-  $('p-iframe').src = 'about:blank';
-  $('p-loader').classList.remove('hidden');
-  $('p-error').classList.add('hidden');
+  $('player').scrollTop = 0;
+
+  $('p-title').textContent = it.title;
   $('p-voices').innerHTML = '';
-  $('p-meta').textContent = [item.kind, item.year, item.score ? '★ ' + item.score : ''].filter(Boolean).join(' · ');
-  $('p-desc').textContent = item.desc || 'Загрузка…';
+  $('p-genres').innerHTML = '';
+  setDesc(it.desc || 'Загрузка описания…');
+  $('p-meta').innerHTML = '';
+  $('p-iframe').src = 'about:blank';
+  $('p-error').classList.add('hidden');
+  $('p-open').href = '#';
+  updateFavIcon(it);
+  pushPlayerState();
+  playingLink = '';
 
-  if (!item.desc && item.sid){
-    const d = await shiki('animes/' + item.sid);
-    $('p-desc').textContent = (d && d.description) ? d.description : 'Описание отсутствует';
-  } else $('p-desc').textContent = item.desc || 'Описание отсутствует';
+  const hadVoices = !!(it.voices && it.voices.length);
+  playItem(it);
+  addHistory(it);
 
-  await ensureToken();
-  let results = [];
-  if (item.sid){
-    const k = await kodik('search', { shikimori_id:item.sid, with_material_data:'true' });
-    if (k && k.results && k.results.length) results = k.results.map(normKodik);
+  if (hadVoices){
+    enrichVoices(it);           // дозагружаем остальные озвучки в фоне
+  }else{
+    $('p-error').classList.add('hidden');
+    $('p-loader').classList.remove('hidden');
+    const found = await lookupSources(it);
+    if (current !== it) return;
+    if (found){
+      it.voices = found.voices;
+      if (!it.desc && found.desc) it.desc = found.desc;
+      if ((!it.genres || !it.genres.length) && found.genres.length){
+        it.genres = found.genres;
+        renderGenres(it.genres);
+      }
+      playItem(it);
+    }else{
+      $('p-loader').classList.add('hidden');
+      $('p-error').classList.remove('hidden');
+    }
   }
-  if (!results.length){
-    const k = await kodik('search', { title:item.title, limit:'10', types:'anime,anime-serial' });
-    if (k && k.results && k.results.length) results = k.results.map(normKodik);
+  setDesc(it.desc || 'Описание отсутствует');
+}
+
+function setDesc(text){
+  const d = $('p-desc');
+  d.textContent = text;
+  d.classList.add('clamp');
+  const btn = $('p-desc-toggle');
+  btn.textContent = 'Читать полностью';
+  requestAnimationFrame(() => {
+    btn.classList.toggle('hidden', d.scrollHeight <= d.clientHeight + 4);
+  });
+}
+
+/* Ищем все озвучки тайтла по shikimori_id (или по названию) */
+async function lookupSources(it){
+  const data = it.sid
+    ? await api('search', { shikimori_id: it.sid, with_material_data: 'true', limit: 100 })
+    : await api('search', { title: it.title, limit: 100, types: 'anime,anime-serial', with_material_data: 'true' });
+  const groups = groupResults(data && data.results);
+  if (!groups.length) return null;
+  return groups.find(g => g.key === it.key) || groups[0];
+}
+
+async function enrichVoices(it){
+  const found = await lookupSources(it);
+  if (!found || current !== it || !it.voices) return;
+  const known = new Set(it.voices.map(v => v.link));
+  let added = 0;
+  found.voices.forEach(v => {
+    if (known.has(v.link)) return;
+    known.add(v.link);
+    it.voices.push(v);
+    added++;
+  });
+  if (!it.desc && found.desc){
+    it.desc = found.desc;
+    setDesc(found.desc);
   }
-  if (!results.length){
+  if ((!it.genres || !it.genres.length) && found.genres.length){
+    it.genres = found.genres;
+    renderGenres(it.genres);
+  }
+  if (added) renderVoices(it);
+}
+
+function playItem(it){
+  renderGenres(it.genres);
+  renderMeta(it);
+
+  if (!it.voices || !it.voices.length){
     $('p-loader').classList.add('hidden');
     $('p-error').classList.remove('hidden');
+    $('p-open').href = '#';
     return;
   }
+  renderVoices(it);
+  play(it.voices[0]);
+}
 
+function renderVoices(it){
   const v = $('p-voices');
-  results.forEach((r, i) => {
+  v.innerHTML = '';
+  const active = playingLink || (it.voices[0] && it.voices[0].link);
+  it.voices.slice(0, 24).forEach(voice => {
     const b = document.createElement('button');
-    b.className = 'voice' + (i === 0 ? ' on' : '');
-    b.textContent = (r.voice || 'Вариант ' + (i+1)) + (r.quality ? ' · ' + r.quality : '');
-    b.onclick = () => { v.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on'); setPlayer(r); };
+    b.type = 'button';
+    b.className = 'voice' + (absUrl(voice.link) === active ? ' on' : '');
+    b.textContent = (voice.translation || 'Озвучка') + (voice.quality ? ' · ' + voice.quality : '');
+    b.onclick = () => {
+      v.querySelectorAll('.voice').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      play(voice);
+    };
     v.appendChild(b);
   });
-  setPlayer(results[0]);
 }
-function setPlayer(r){
-  let l = r.kodikLink || '';
-  if (l.startsWith('//')) l = 'https:' + l;
-  $('p-iframe').src = l;
-  $('p-iframe').onload = () => $('p-loader').classList.add('hidden');
-  $('p-meta').textContent = [r.kind, r.year, r.quality, r.voice ? '🎙 ' + r.voice : '', r.score ? '★ ' + r.score : ''].filter(Boolean).join(' · ');
+
+function play(voice){
+  const url = absUrl(voice.link);
+  if (!url){ showPlayError(); return; }
+  playingLink = url;
+  $('p-error').classList.add('hidden');
+  $('p-loader').classList.remove('hidden');
+  $('p-open').href = url;
+
+  const frame = $('p-iframe');
+  clearTimeout(loadTimer);
+  loadTimer = setTimeout(() => {
+    $('p-loader').classList.add('hidden');
+    toast('Видео грузится долго — попробуйте другую озвучку');
+  }, 12000);
+
+  let target = url;
+  try{
+    const u = new URL(url);
+    u.searchParams.set('translations', 'false'); // выбор озвучки — нашими чипами
+    target = u.href;
+  }catch(e){}
+
+  // сбрасываем src, чтобы повторный выбор той же озвучки реально перезапускал плеер
+  frame.onload = null;
+  frame.src = 'about:blank';
+  setTimeout(() => {
+    frame.onload = () => {
+      clearTimeout(loadTimer);
+      $('p-loader').classList.add('hidden');
+    };
+    frame.src = target;
+  }, 30);
+
+  const meta = $('p-meta');
+  meta.innerHTML = '';
+  addMeta(meta, voice.translation);
+  addMeta(meta, voice.quality);
+  if (voice.episodes) addMeta(meta, voice.episodes + ' эп.');
+  addMeta(meta, current && current.year);
+  addMeta(meta, current && current.kind);
+  if (current && current.rating) addMeta(meta, '★ ' + current.rating.toFixed(1));
 }
+
+function addMeta(container, value){
+  if (!value) return;
+  const s = document.createElement('span');
+  s.textContent = value;
+  container.appendChild(s);
+}
+
+function renderMeta(it){
+  const meta = $('p-meta');
+  meta.innerHTML = '';
+  addMeta(meta, it.kind);
+  addMeta(meta, it.year);
+  if (it.episodes) addMeta(meta, it.episodes + ' эп.');
+  if (it.minAge) addMeta(meta, it.minAge + '+');
+  if (it.rating) addMeta(meta, '★ ' + it.rating.toFixed(1));
+}
+
+function renderGenres(g){
+  const box = $('p-genres');
+  box.innerHTML = '';
+  (g || []).slice(0, 8).forEach(x => {
+    const s = document.createElement('span');
+    s.className = 'genre';
+    s.textContent = x;
+    box.appendChild(s);
+  });
+}
+
+function updateFavIcon(it){
+  const btn = $('p-fav');
+  const on = isFav(it.key);
+  btn.textContent = on ? '♥' : '♡';
+  btn.classList.toggle('on', on);
+}
+
+function showPlayError(){
+  $('p-loader').classList.add('hidden');
+  $('p-error').classList.remove('hidden');
+}
+
 function closePlayer(){
   $('player').classList.remove('open');
+  $('p-iframe').onload = null;
   $('p-iframe').src = 'about:blank';
   document.body.style.overflow = '';
+  clearTimeout(loadTimer);
+  current = null;
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  renderHistoryRow();
+  renderMy();
 }
 
-/* ============ СОБЫТИЯ ============ */
-document.querySelectorAll('.sec-chip').forEach(ch => ch.onclick = () => {
-  document.querySelectorAll('.sec-chip').forEach(c => c.classList.remove('on'));
-  ch.classList.add('on');
-  if (ch.dataset.sec === 'random') toast('🍥 Случайная подборка');
-  loadHome(ch.dataset.sec);
+/* ============================================================
+   ВКЛАДКИ / НАВИГАЦИЯ
+   ============================================================ */
+function setTab(name){
+  const screens = { home: 'screen-home', search: 'screen-search', my: 'screen-my' };
+  Object.entries(screens).forEach(([k, id]) => $(id).classList.toggle('hidden', k !== name));
+  ['home', 'search', 'my'].forEach(k => $('tab-' + k).classList.toggle('on', k === name));
+  window.scrollTo(0, 0);
+  if (name === 'search') setTimeout(() => $('search-input').focus(), 60);
+  if (name === 'my') renderMy();
+}
+
+/* ============================================================
+   СОБЫТИЯ
+   ============================================================ */
+document.querySelectorAll('.sec-chip').forEach(ch => {
+  ch.onclick = () => {
+    document.querySelectorAll('.sec-chip').forEach(c => c.classList.remove('on'));
+    ch.classList.add('on');
+    home.sec = ch.dataset.sec;
+    window.scrollTo(0, 0);
+    loadHome(true);
+  };
 });
+
 $('tab-home').onclick = () => setTab('home');
 $('tab-search').onclick = () => setTab('search');
-$('btn-back').onclick = closePlayer;
-
-$('search-input').addEventListener('input', e => {
-  clearTimeout(searchTimer);
-  const q = e.target.value.trim();
-  if (!q){
-    searchReq++;
-    searchStatus(null);
-    $('search-grid').innerHTML = '';
-    $('search-empty').classList.add('hidden');
-    $('search-hint').classList.remove('hidden');
-    return;
+$('tab-my').onclick = () => setTab('my');
+$('btn-back').onclick = () => {
+  if (history.state && history.state.player){
+    history.back();
+    // страховка: если запись не сдвинулась — закрываем сами
+    setTimeout(() => { if ($('player').classList.contains('open')) closePlayer(); }, 400);
+  }else{
+    closePlayer();
   }
-  searchTimer = setTimeout(() => doSearch(q), 350);
-});
+};
 
+$('btn-refresh').onclick = () => {
+  ['c_' + home.sec + '|' + home.genre].forEach(LS.del);
+  toast('Обновляем…');
+  loadHome(true);
+};
+
+$('btn-genres').onclick = () => {
+  $('genre-panel').classList.toggle('hidden');
+};
+
+$('continue-clear').onclick = () => {
+  watched = [];
+  LS.set('hist', []);
+  renderHistoryRow();
+  toast('История очищена');
+};
+
+$('fav-clear').onclick = () => {
+  favs = [];
+  LS.set('fav', []);
+  renderMy();
+  toast('Избранное очищено');
+};
+
+$('hist-clear').onclick = () => {
+  watched = [];
+  LS.set('hist', []);
+  renderMy();
+  renderHistoryRow();
+  toast('История очищена');
+};
+
+$('p-fav').onclick = () => {
+  if (!current) return;
+  const on = toggleFav(current);
+  updateFavIcon(current);
+  toast(on ? 'Добавлено в избранное' : 'Удалено из избранного');
+};
+
+$('p-retry').onclick = () => {
+  if (!current) return;
+  const active = $('p-voices').querySelector('.voice.on');
+  const idx = active ? [...$('p-voices').children].indexOf(active) : 0;
+  const voice = current.voices && current.voices[idx];
+  if (voice) play(voice);
+};
+
+$('p-full').onclick = () => {
+  const el = $('p-wrap');
+  if (!document.fullscreenElement){
+    (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
+  }else{
+    document.exitFullscreen().catch(() => {});
+  }
+};
+
+$('p-desc-toggle').onclick = () => {
+  const d = $('p-desc');
+  const clamped = d.classList.toggle('clamp');
+  $('p-desc-toggle').textContent = clamped ? 'Читать полностью' : 'Свернуть';
+};
+
+const searchInput = $('search-input');
+searchInput.addEventListener('input', e => {
+  clearTimeout(search.timer);
+  const q = e.target.value.trim();
+  $('search-clear').classList.toggle('hidden', !q);
+  if (!q){ resetSearch(); return; }
+  if (q.length < 2){ setSearchStatus('Введите хотя бы 2 символа'); return; }
+  search.timer = setTimeout(() => doSearch(q), 400);
+});
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter'){
+    clearTimeout(search.timer);
+    const q = searchInput.value.trim();
+    if (q.length >= 2){ searchInput.blur(); doSearch(q); }
+  }
+});
+$('search-clear').onclick = () => {
+  searchInput.value = '';
+  $('search-clear').classList.add('hidden');
+  resetSearch();
+  searchInput.focus();
+};
+
+/* Бесконечная прокрутка */
 window.addEventListener('scroll', () => {
   if ($('player').classList.contains('open')) return;
-  if (window.innerHeight + window.scrollY < document.body.offsetHeight - 800) return;
+  if (window.innerHeight + window.scrollY < document.body.offsetHeight - 700) return;
   if (!$('screen-home').classList.contains('hidden')) loadHomeMore();
-  else loadSearchMore();
-}, { passive:true });
+  else if (!$('screen-search').classList.contains('hidden')) loadSearchMore();
+}, { passive: true });
 
-/* ============ СТАРТ ============ */
-setTab('home');
-loadHome('popular');
+window.addEventListener('online', () => toast('Соединение восстановлено'));
+window.addEventListener('offline', () => toast('Нет соединения — показан кеш'));
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && current) addHistory(current);
+});
+
+/* Кнопка "Назад" устройства закрывает плеер, а не приложение */
+function pushPlayerState(){
+  try{ history.pushState({ player: true }, ''); }catch(e){}
+}
+window.addEventListener('popstate', () => {
+  if ($('player').classList.contains('open')) closePlayer();
+});
+
+/* ============================================================
+   СТАРТ
+   ============================================================ */
+(function init(){
+  if (!TOKENS.length){
+    $('home-empty').classList.remove('hidden');
+    $('home-empty').innerHTML = '<span class="big">🔑</span>Не удалось инициализировать доступ к каталогу';
+    return;
+  }
+  buildGenrePanel();
+  setTab('home');
+  renderHistoryRow();
+  loadHome(true);
+  idle(() => {
+    // тихо прогреваем кеш соседних подборок
+    ['ongoing', 'top'].forEach(async sec => {
+      if (cacheGet(sec + '|')) return;
+      const chunk = await fetchListChunk(sec, '', null, 2, 16);
+      if (chunk && chunk.items.length) cacheSet(sec + '|', chunk.items, chunk.next);
+    });
+  });
+})();
+
+function idle(fn){
+  if ('requestIdleCallback' in window) requestIdleCallback(fn, { timeout: 3000 });
+  else setTimeout(fn, 1200);
+}
 </script>
 </body>
 </html>
