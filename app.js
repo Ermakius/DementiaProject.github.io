@@ -17,11 +17,23 @@ const TTL = 15 * 60 * 1000;     // время жизни кеша подборо
 const VERSION = 'anime-2.0';
 
 /* Бэкенд (папка server/). Пусто — приложение работает напрямую с Kodik и ntfy.
-   Адрес можно вписать сюда или выставить в консоли: localStorage.anime_api = 'https://api.домен' */
-const API_BASE = (localStorage.getItem('anime_api') || '').replace(/\/+$/, '');
+   DEFAULT_API — адрес для всех посетителей: '' выключен, 'same' — тот же домен.
+   Пользователь может переопределить его в настройках («Свой сервер»). */
+const DEFAULT_API = '';
+const API_BASE = readApiBase();
 const apiReady = API_BASE
   ? getJSON(API_BASE + '/api/health', 4000).then(() => true).catch(() => false)
   : Promise.resolve(false);
+
+function readApiBase(){
+  let v = null;
+  try{ v = localStorage.getItem('anime_api'); }catch(e){}
+  if (v === 'off') return '';
+  if (v == null || v === '') v = DEFAULT_API;
+  if (!v) return '';
+  if (v === 'same') return location.origin;
+  return v.replace(/\/+$/, '').replace(/\/api$/, '');
+}
 
 /* Токены Kodik зашифрованы (перевёрнутая перестановка base64). */
 const ENC_TOKENS = [
@@ -2043,6 +2055,41 @@ async function syncLists(silent){
 }
 
 /* ============================================================
+   АДРЕС СВОЕГО СЕРВЕРА
+   ============================================================ */
+
+function apiAddress(){
+  return API_BASE;
+}
+
+/* Принимаем и «api.домен», и полный URL, и лишний /api на конце. */
+function normalizeApiUrl(raw){
+  let v = (raw || '').trim();
+  if (!v) return '';
+  if (!/^https?:\/\//i.test(v)){
+    v = /^(localhost|127\.0\.0\.1|\[::1\])(:|$)/i.test(v) ? 'http://' + v : 'https://' + v;
+  }
+  v = v.replace(/\/+$/, '').replace(/\/api$/, '');
+  return v;
+}
+
+async function renderApi(){
+  if (!$('api-url')) return;
+  const cur = apiAddress();
+  $('api-url').value = cur;
+  if (!cur){
+    $('api-hint').textContent = 'Без сервера приложение работает как обычно — напрямую с Kodik. С сервером появляется вход в один клик и перенос профиля.';
+    return;
+  }
+  $('api-hint').textContent = 'Сейчас: ' + cur + ' — проверяю…';
+  const ok = await getJSON(cur + '/api/health', 4000).then(() => true).catch(() => false);
+  if (apiAddress() !== cur) return; // адрес успели поменять
+  $('api-hint').textContent = ok
+    ? 'Сейчас: ' + cur + ' — сервер отвечает.'
+    : 'Сейчас: ' + cur + ' — сервер не отвечает. Проверьте адрес и что он запущен.';
+}
+
+/* ============================================================
    ПЕРЕНОС ПРОФИЛЯ МЕЖДУ УСТРОЙСТВАМИ
    ============================================================ */
 async function cloudSave(){
@@ -3087,6 +3134,27 @@ $('import-file').onchange = e => {
 $('btn-export').onclick = exportData;
 $('btn-reset').onclick = resetAll;
 
+/* --- свой сервер --- */
+$('btn-api-save').onclick = () => {
+  const url = normalizeApiUrl($('api-url').value);
+  if (!/^https?:\/\/[^/\s]+$/i.test(url)){
+    toast('Адрес вида https://api.домен или localhost:8080');
+    return;
+  }
+  localStorage.setItem('anime_api', url);
+  toast('Сервер: ' + url + ' — перезагружаю…', 1500);
+  setTimeout(() => location.reload(), 700);
+};
+$('btn-api-clear').onclick = () => {
+  if (!apiAddress()){ toast('Сервер и так отключён'); return; }
+  localStorage.setItem('anime_api', 'off');   // перекрывает и DEFAULT_API тоже
+  toast('Сервер отключён, перезагружаю…', 1200);
+  setTimeout(() => location.reload(), 700);
+};
+$('api-url').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('btn-api-save').click();
+});
+
 /* --- списки онлайн --- */
 $('btn-auth-sync').onclick = () => syncLists(false);
 $('btn-auth-out').onclick = async () => {
@@ -3215,6 +3283,7 @@ window.addEventListener('beforeunload', () => {
   renderHistoryRow();
   renderProfile();
   initAuth();
+  renderApi();
   loadHome(true);
 
   // ?party=CODE
