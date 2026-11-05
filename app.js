@@ -19,7 +19,7 @@ const VERSION = 'anime-2.0';
 /* Бэкенд (папка server/). Пусто — приложение работает напрямую с Kodik и ntfy.
    DEFAULT_API — адрес для всех посетителей: '' выключен, 'same' — тот же домен.
    Пользователь может переопределить его в настройках («Свой сервер»). */
-const DEFAULT_API = '';
+const DEFAULT_API = 'https://dementiaproject2.cloudpub.ru';
 const API_BASE = readApiBase();
 const apiReady = API_BASE
   ? getJSON(API_BASE + '/api/health', 4000).then(() => true).catch(() => false)
@@ -1809,37 +1809,47 @@ function playAni(epOrdinal, target, noSkip){
   };
   v.addEventListener('loadedmetadata', onMeta, { once: true });
   const start = () => v.play().catch(() => {});
-  const nativeHls = !!v.canPlayType('application/vnd.apple.mpegurl');
-  const direct = nativeHls || /\.(mp4|webm)(\?|#|$)/i.test(ep.hls);
+  // Обычный файл — сразу в <video>.
+  const isFile = /\.(mp4|webm|mov)(\?|#|$)/i.test(ep.hls);
 
-  if (direct){
+  if (isFile){
     v.src = ep.hls;
     start();
     return;
   }
 
+  // .m3u8 всегда пытаемся играть через hls.js (MSE): canPlayType здесь ненадёжен
+  // и может отдавать "maybe" даже там, где нативного HLS нет.
   loadHls().then(Hls => {
-    if (!Hls || !Hls.isSupported()){
-      showAniError('Не удалось загрузить HLS-плеер', 'Попробуйте Kodik или Safari');
+    if (Hls && Hls.isSupported()){
+      if (watching.src !== 'ani' || watching.aniEp !== ep) return;
+      ani.hls = new Hls({ enableWorker: true });
+      ani.hls.loadSource(ep.hls);
+      ani.hls.attachMedia(v);
+      ani.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        $('p-loader').classList.add('hidden');
+        start();
+      });
+      ani.hls.on(Hls.Events.ERROR, (_, data) => {
+        if (!data || !data.fatal) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && ani.retries < 2){
+          ani.retries++;
+          ani.hls.startLoad();
+          return;
+        }
+        showAniError('Серия не загрузилась', 'Переключитесь на Kodik или попробуйте позже');
+      });
       return;
     }
-    if (watching.src !== 'ani' || watching.aniEp !== ep) return;
-    ani.hls = new Hls({ enableWorker: true });
-    ani.hls.loadSource(ep.hls);
-    ani.hls.attachMedia(v);
-    ani.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      $('p-loader').classList.add('hidden');
+
+    // Запасной путь: Safari и другие браузеры с настоящим нативным HLS.
+    if (v.canPlayType('application/vnd.apple.mpegurl')){
+      v.src = ep.hls;
       start();
-    });
-    ani.hls.on(Hls.Events.ERROR, (_, data) => {
-      if (!data || !data.fatal) return;
-      if (data.type === Hls.ErrorTypes.NETWORK_ERROR && ani.retries < 2){
-        ani.retries++;
-        ani.hls.startLoad();
-        return;
-      }
-      showAniError('Серия не загрузилась', 'Переключитесь на Kodik или попробуйте позже');
-    });
+      return;
+    }
+
+    showAniError('Не удалось загрузить HLS-плеер', 'Попробуйте Kodik или Safari');
   });
 }
 
