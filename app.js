@@ -1450,7 +1450,7 @@ async function openPlayer(it){
   renderResumeRow(it);
   hideRelated();
 
-  $('p-shiki').href = it.sid ? 'https://shikimori.one/animes/' + it.sid : 'https://shikimori.one';
+  $('p-shiki').href = it.sid ? 'https://shikimori.io/animes/' + it.sid : 'https://shikimori.io';
   $('p-mal').href = 'https://myanimelist.net/search/all?q=' + encodeURIComponent(it.orig || it.title);
   $('p-dub').classList.remove('hidden');
   setTimeout(() => $('p-dub').classList.add('hidden'), 6000);
@@ -2997,7 +2997,7 @@ const related = { key:'', items: [], req: 0, cache: new Map() };
    ТОЧНЫЕ СВЯЗИ, ДЕТАЛИ, ПЕРВОИСТОЧНИК
    ============================================================ */
 
-const SHIKI_WEB = 'https://shikimori.one';
+const SHIKI_WEB = 'https://shikimori.io';
 const shikiCache = new Map();
 const jikanCache = new Map();
 const staffCache = new Map();
