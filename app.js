@@ -16,6 +16,13 @@ const PAGE_LIMIT = 100;         // Kodik отдаёт одну строку на
 const TTL = 15 * 60 * 1000;     // время жизни кеша подборок
 const VERSION = 'anime-2.0';
 
+/* Бэкенд (папка server/). Пусто — приложение работает напрямую с Kodik и ntfy.
+   Адрес можно вписать сюда или выставить в консоли: localStorage.anime_api = 'https://api.домен' */
+const API_BASE = (localStorage.getItem('anime_api') || '').replace(/\/+$/, '');
+const apiReady = API_BASE
+  ? getJSON(API_BASE + '/api/health', 4000).then(() => true).catch(() => false)
+  : Promise.resolve(false);
+
 /* Токены Kodik зашифрованы (перевёрнутая перестановка base64). */
 const ENC_TOKENS = [
   "==QO0ADM3kTZmRTNiRDNjFDM==QOxkDMzQjZ4ADZ4zNhZTN",
@@ -128,6 +135,12 @@ function stripTags(s){
 let tokenIdx = 0;
 
 async function api(path, params = {}){
+  // через бэкенд: без токена в браузере, с общим кешем и обрезанным ответом
+  if (API_BASE && await apiReady){
+    const data = await getJSON(API_BASE + '/api/kodik/' + path + '?' + qs(params), 12000).catch(() => null);
+    if (data && Array.isArray(data.results)) return data;
+    // сервер не ответил — молча идём напрямую, как раньше
+  }
   if (!TOKENS.length) return null;
   for (let i = 0; i < TOKENS.length; i++){
     const idx = (tokenIdx + i) % TOKENS.length;
@@ -1844,7 +1857,8 @@ const party = {
   on: false, code: '', host: false, name: '',
   es: null, myId: Math.random().toString(36).slice(2, 10),
   members: new Map(), lastPublish: 0, titleKey: '', joining: false,
-  epGuardUntil: 0, lastEpTarget: 0, lastEpAt: 0
+  epGuardUntil: 0, lastEpTarget: 0, lastEpAt: 0,
+  ws: null, wsReady: false, queue: []
 };
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1857,11 +1871,68 @@ const partyTopic = () => 'anime-party-' + party.code.toLowerCase();
 
 function partyPublish(payload){
   const body = JSON.stringify({ from: party.myId, name: party.name, ...payload });
+  if (party.ws && (party.ws.readyState === 0 || party.ws.readyState === 1)){
+    if (party.ws.readyState === 1){
+      try{ party.ws.send(body); }catch(e){}
+    }else{
+      party.queue.push(body);
+      if (party.queue.length > 40) party.queue.shift();
+    }
+    return Promise.resolve();
+  }
   return fetch(NTFY + '/' + partyTopic(), {
     method: 'POST',
     body,
     headers: { 'X-Title': 'anime', 'X-Tags': 'tv' }
   }).catch(() => {});
+}
+
+/* Комната через WebSocket бэкенда (server/) */
+function partyConnectWS(attempt = 0){
+  if (!API_BASE || typeof WebSocket === 'undefined') return false;
+  let ws;
+  try{ ws = new WebSocket(API_BASE.replace(/^http/, 'ws') + '/api/ws/party/' + party.code); }
+  catch(e){ return false; }
+
+  party.ws = ws;
+  party.wsReady = false;
+  ws.onopen = () => {
+    if (party.ws !== ws) return;
+    party.wsReady = true;
+    refreshPartyUI();
+    const q = party.queue;
+    party.queue = [];
+    q.forEach(m => { try{ ws.send(m); }catch(e){} });
+  };
+  ws.onmessage = ev => { try{ partyHandle({ message: ev.data, time: Date.now() / 1000 }); }catch(e){} };
+  ws.onclose = () => {
+    if (party.ws !== ws) return;
+    party.ws = null;
+    party.wsReady = false;
+    if (!party.on) return;
+    if (attempt < 3){
+      setTimeout(() => { if (party.on && !party.ws) partyConnectWS(attempt + 1); }, 1200 * (attempt + 1));
+    }else{
+      partyUseNtfy();      // сервер недоступен — тихо переезжаем на публичный канал
+      if (party.on) partyPublish({ k: 'join' });
+    }
+  };
+  ws.onerror = () => {};
+  return true;
+}
+
+function partyUseNtfy(){
+  if (party.es) return;
+  try{
+    party.es = new EventSource(NTFY + '/' + partyTopic() + '/sse');
+    party.es.onmessage = ev => { try{ partyHandle(JSON.parse(ev.data)); }catch(e){} };
+    party.es.onerror = () => {
+      // EventSource сам переподключается; ругаемся только если совсем долго
+    };
+  }catch(e){
+    toast('Не удалось подключиться к комнате');
+  }
+  refreshPartyUI();
 }
 
 function partySend(payload){
@@ -1941,7 +2012,7 @@ function refreshPartyUI(){
   $('party-room').classList.toggle('hidden', !inRoom);
   if (!inRoom) return;
   $('party-code').textContent = party.code;
-  $('party-role').textContent = party.host ? 'вы — хост' : 'вы — гость';
+  $('party-role').textContent = (party.host ? 'вы — хост' : 'вы — гость') + (party.wsReady ? ' · сервер' : '');
   $('party-people').textContent = partyMembersText();
   $('party-sync').textContent = party.host ? 'Отправить сигнал' : 'Догнать хоста';
   const url = location.origin + location.pathname + '?party=' + party.code;
@@ -1973,17 +2044,8 @@ function partyJoin(code, asHost){
   $('party-chat').innerHTML = '';
   partyChatLine('', asHost ? 'Комната создана. Код: ' + code : 'Вы вошли в комнату ' + code, true);
 
-  try{
-    party.es = new EventSource(NTFY + '/' + partyTopic() + '/sse');
-    party.es.onmessage = ev => {
-      try{ partyHandle(JSON.parse(ev.data)); }catch(e){}
-    };
-    party.es.onerror = () => {
-      // EventSource сам переподключается; ругаемся только если совсем долго
-    };
-  }catch(e){
-    toast('Не удалось подключиться к комнате');
-  }
+  party.queue = [];
+  if (!partyConnectWS()) partyUseNtfy();
 
   partyPublish({ k: 'join' });
   if (asHost){
@@ -2006,9 +2068,13 @@ function partyJoin(code, asHost){
 
 function partyLeave(silent){
   if (party.on && !silent) partyPublish({ k: 'bye' });
+  party.on = false;            // до закрытия сокета, иначе сработает переподключение
+  if (party.ws){ try{ party.ws.close(); }catch(e){} }
+  party.ws = null;
+  party.wsReady = false;
+  party.queue = [];
   if (party.es){ try{ party.es.close(); }catch(e){} }
   party.es = null;
-  party.on = false;
   party.host = false;
   party.code = '';
   party.titleKey = '';
@@ -2023,10 +2089,16 @@ function partyLeave(silent){
 }
 
 function partyHandle(env){
-  if (!env || !env.message) return;
+  if (!env) return;
+  // ntfy присылает конверт { message, time }, WebSocket — само сообщение
+  const raw = env.message != null ? env.message : env;
   let m;
-  try{ m = JSON.parse(env.message); }catch(e){ return; }
-  if (!m || m.from === party.myId) return;
+  if (typeof raw === 'string'){
+    try{ m = JSON.parse(raw); }catch(e){ return; }
+  }else{
+    m = raw;
+  }
+  if (!m || typeof m !== 'object' || m.from === party.myId) return;
 
   const at = (env.time || (Date.now() / 1000)) * 1000;
   party.members.set(m.from, { name: m.name || 'Гость', ts: Date.now() });

@@ -1,5 +1,5 @@
 /* Service Worker: оболочка + кеш постеров */
-const VERSION = 'anime-v7';
+const VERSION = 'anime-v8';
 const CORE = ['./', './index.html', './app.css', './app.js', './manifest.json', './icon.png', './icon-192.png'];
 
 self.addEventListener('install', e => {
