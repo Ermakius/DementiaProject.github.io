@@ -1468,6 +1468,7 @@ async function openPlayer(it){
   addToWatching(it);
   trackOpen(it);
   loadRelated(it);
+  loadChrono(it);
   loadInfo(it);
 
   if (!it.voices || !it.voices.length){
@@ -2991,7 +2992,7 @@ function updatePeople(){
 /* ============================================================
    СВЯЗАННЫЕ ТАЙТЛЫ
    ============================================================ */
-const related = { key:'', items: [], req: 0, cache: new Map() };
+const related = { key:'', items: [], chrono: [], req: 0, chronoReq: 0, cache: new Map() };
 
 /* ============================================================
    ТОЧНЫЕ СВЯЗИ, ДЕТАЛИ, ПЕРВОИСТОЧНИК
@@ -3255,7 +3256,7 @@ function renderOrigin(list){
       links.appendChild(s);
     }
     const ml = document.createElement('a');
-    ml.href = 'https://mangalib.me/search?q=' + encodeURIComponent(m.russian || m.name || '');
+    ml.href = 'https://mangalib.me/ru/search?q=' + encodeURIComponent(m.russian || m.name || '');
     ml.target = '_blank';
     ml.rel = 'noopener';
     ml.textContent = 'MangaLib ↗';
@@ -3385,11 +3386,108 @@ function renderRelSkeleton(){
 
 function hideRelated(){
   related.req++;
+  related.chronoReq++;
   related.key = '';
   related.items = [];
+  related.chrono = [];
   const sec = $('p-related-sec'), row = $('p-related');
   if (sec) sec.classList.add('hidden');
   if (row) row.innerHTML = '';
+  const csec = $('p-chrono-sec'), crow = $('p-chrono');
+  if (csec) csec.classList.add('hidden');
+  if (crow) crow.innerHTML = '';
+}
+
+/* Хронология франшизы: цепочка sequel/prequel из /animes/{id}/franchise.
+   Если у текущего тайтла нет продолжений/предысторий — блок скрывается. */
+function buildChrono(data, sid){
+  const nodes = (data && data.nodes) || [];
+  const links = (data && data.links) || [];
+  if (nodes.length < 2) return [];
+
+  const byId = new Map(nodes.map(n => [String(n.id), n]));
+  const next = new Map();   // раньше -> позже
+  const prev = new Map();   // позже -> раньше
+  links.forEach(l => {
+    if (l.relation !== 'sequel' && l.relation !== 'prequel') return;
+    const s = String(l.source_id), t = String(l.target_id);
+    // sequel s->t: t после s; prequel s->t: t до s
+    const [before, after] = l.relation === 'sequel' ? [s, t] : [t, s];
+    next.set(before, after);
+    prev.set(after, before);
+  });
+  if (!byId.has(String(sid))) return [];
+
+  // идём назад к началу цепочки
+  let root = String(sid);
+  const seen = new Set();
+  while (prev.has(root) && !seen.has(root)) { seen.add(root); root = prev.get(root); }
+
+  // проходим вперёд
+  const chain = [];
+  const visited = new Set();
+  let cur = root;
+  while (cur && byId.has(cur) && !visited.has(cur)) {
+    visited.add(cur);
+    chain.push(byId.get(cur));
+    cur = next.get(cur);
+  }
+
+  // текущий тайтл должен быть в цепочке, иначе хронологии нет
+  if (!chain.some(n => String(n.id) === String(sid))) return [];
+
+  return chain.map(n => ({
+    sid: n.id,
+    title: n.name || '',
+    year: n.year || yearOf(n),
+    cur: String(n.id) === String(sid)
+  }));
+}
+
+function renderChrono(){
+  const sec = $('p-chrono-sec'), box = $('p-chrono');
+  if (!sec || !box) return;
+  box.innerHTML = '';
+  if (!related.chrono.length){ sec.classList.add('hidden'); return; }
+
+  const frag = document.createDocumentFragment();
+  related.chrono.forEach((c, i) => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'chrono-item' + (c.cur ? ' cur' : '');
+    row.disabled = !!c.cur;
+
+    const num = document.createElement('span');
+    num.className = 'chrono-num';
+    num.textContent = String(i + 1);
+
+    const body = document.createElement('span');
+    body.className = 'chrono-body';
+    body.textContent = c.title + (c.year ? ' · ' + c.year : '');
+
+    row.appendChild(num);
+    row.appendChild(body);
+    if (c.cur){
+      const tag = document.createElement('span');
+      tag.className = 'chrono-now';
+      tag.textContent = 'вы здесь';
+      row.appendChild(tag);
+    }else{
+      row.addEventListener('click', () => openExactRelated({ sid: c.sid, title: c.title, item: null }));
+    }
+    frag.appendChild(row);
+  });
+  box.appendChild(frag);
+  sec.classList.remove('hidden');
+}
+
+async function loadChrono(it){
+  if (!it || !it.sid || !$('p-chrono')) return;
+  const req = ++related.chronoReq;
+  const data = await shikiGet('/animes/' + it.sid + '/franchise');
+  if (req !== related.chronoReq) return;
+  related.chrono = buildChrono(data, it.sid);
+  renderChrono();
 }
 
 /* Только официальные связи Shikimori: без поиска «похожих» названий.
@@ -3817,6 +3915,20 @@ window.addEventListener('scroll', () => {
   if (!$('screen-home').classList.contains('hidden')) loadHomeMore();
   else if (!$('screen-search').classList.contains('hidden')) loadSearchMore();
 }, { passive: true });
+
+/* Колесо мыши над горизонтальной лентой листает её по горизонтали —
+   иначе на ПК серии/связанные/подборки колесом не прокрутить. */
+document.addEventListener('wheel', e => {
+  const t = e.target;
+  if (!t || !t.closest) return;
+  const el = t.closest('.ep-strip, .relrow, .hrow, .chips, .list-tabs');
+  if (!el) return;
+  if (el.scrollWidth <= el.clientWidth + 1) return;   // некуда листать
+  const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+  if (Math.abs(delta) < 1) return;
+  el.scrollLeft += delta;
+  e.preventDefault();
+}, { passive: false });
 
 window.addEventListener('online', () => toast('Соединение восстановлено'));
 window.addEventListener('offline', () => toast('Нет соединения — показан кеш'));

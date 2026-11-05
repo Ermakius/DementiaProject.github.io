@@ -170,6 +170,16 @@ body.no-fx #p-iframe,body.no-fx #p-video{filter:none}
 .rel-card .ctitle{font-size:11px;line-height:1.25;margin-top:2px}
 .rel-skel{flex:0 0 104px;max-width:104px}
 
+/* ---------- хронология франшизы ---------- */
+.chrono{display:flex;flex-direction:column;gap:7px;padding:0 16px}
+.chrono-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:11px;padding:11px 12px;color:#e8eaf0;min-height:44px;cursor:pointer}
+.chrono-item.cur{border-color:rgba(10,132,255,.5);background:rgba(10,132,255,.12);cursor:default}
+.chrono-num{flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:rgba(255,255,255,.08);color:#a9d2ff}
+.chrono-item.cur .chrono-num{background:rgba(10,132,255,.35);color:#fff}
+.chrono-body{flex:1;font-size:13px;line-height:1.3;min-width:0}
+.chrono-now{flex:0 0 auto;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#7ab8ff}
+.chrono-item:not(.cur):active{background:rgba(255,255,255,.09)}
+
 /* ---------- табы ---------- */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:rgba(15,15,20,.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line)}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;color:#8f8f99;min-height:52px}
