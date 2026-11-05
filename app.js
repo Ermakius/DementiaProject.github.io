@@ -219,6 +219,8 @@ function normalize(r){
     episodes: md.episodes_total || r.episodes_count || 0,
     duration: md.duration || 0,
     minAge: md.minimal_age || 0,
+    studio: md.studio || md.anime_studio || '',
+    mpaa: md.rating_mpaa || '',
     desc: stripTags(md.description || md.anime_description || ''),
     genres: genres.slice(0, 8),
     allGenres: genres,
@@ -1226,6 +1228,14 @@ let current = null;
 let loadTimer = null;
 let skipArmed = false;
 let skipDone = false;
+let sourceTouched = false;
+
+/* Второй источник: релиз AniLiberty и его проигрываемые серии. */
+const ani = {
+  key: '', release: null, episodes: [], loading: false, fallbackActive: false,
+  searchCache: new Map(), releaseCache: new Map(),
+  hls: null, hlsScript: null, retries: 0, lastVoice: null
+};
 
 let watching = {
   lastT: null, lastTs: 0, cur: 0, dur: 0, ep: null, season: null,
@@ -1238,7 +1248,7 @@ function resetWatchState(it){
   const target = (settings.resume && p && p.t > 25 && (!p.d || p.t < p.d - 20)) ? p.t : 0;
   watching = {
     lastT: null, lastTs: 0, cur: 0, dur: p && p.d ? p.d : 0, ep: it._ep || (p && p.ep ? p.ep : null), season: null,
-    playing: false, started: false, tr: '', voice: null,
+    playing: false, started: false, tr: '', voice: null, src: 'kodik', aniEp: null,
     resumeTarget: target, resumeTriedAt: 0, resumeAttempts: 0, resumeDone: !target
   };
   skipArmed = settings.skip && !target && it.kind !== 'Фильм';
@@ -1247,6 +1257,20 @@ function resetWatchState(it){
 }
 
 function playerCmd(method, extra){
+  if (watching.src === 'ani'){
+    const v = $('p-video');
+    if (!v) return;
+    try{
+      if (method === 'seek' && extra && extra.seconds != null) v.currentTime = Math.max(0, Number(extra.seconds) || 0);
+      else if (method === 'play') v.play().catch(() => {});
+      else if (method === 'pause') v.pause();
+      else if (method === 'mute') v.muted = true;
+      else if (method === 'unmute') v.muted = false;
+      else if (method === 'volume' && extra && extra.volume != null) v.volume = Math.max(0, Math.min(1, Number(extra.volume) || 0));
+      else if (method === 'speed' && extra && extra.speed != null) v.playbackRate = Math.max(0.25, Math.min(3, Number(extra.speed) || 1));
+    }catch(e){}
+    return;
+  }
   const f = $('p-iframe');
   if (!f || !f.contentWindow) return;
   try{ f.contentWindow.postMessage({ key: 'kodik_player_api', value: { method, ...(extra || {}) } }, '*'); }catch(e){}
@@ -1349,17 +1373,30 @@ function onPlayerTime(t){
     }
   }
 
-  // пропуск опенинга
-  if (skipArmed && !skipDone && t >= 3 && t < 55){
-    skipDone = true;
-    skipArmed = false;
-    playerSeek(settings.skipLen + 2);
-    stats.flags.skip = 1;
-    saveStats();
-    toast('Опенинг пропущен ⏭');
+  // пропуск опенинга: у AniLiberty есть точные start/stop серии
+  const opening = (watching.src === 'ani' && watching.aniEp && Array.isArray(watching.aniEp.opening))
+    ? watching.aniEp.opening : null;
+  if (skipArmed && !skipDone && t >= 2){
+    if (opening && t < opening[1]){
+      skipDone = true;
+      skipArmed = false;
+      playerSeek(opening[1] + 1);
+      stats.flags.skip = 1;
+      saveStats();
+      toast('Опенинг пропущен ⏭');
+    }else if (!opening && t >= 3 && t < 55){
+      skipDone = true;
+      skipArmed = false;
+      playerSeek(settings.skipLen + 2);
+      stats.flags.skip = 1;
+      saveStats();
+      toast('Опенинг пропущен ⏭');
+    }
   }
 
-  const showSkip = !skipDone && watching.dur > 200 && t >= 3 && t < settings.skipLen;
+  const showSkip = !skipDone && (
+    opening ? t >= 1 && t < opening[1] - 2 : watching.dur > 200 && t >= 3 && t < settings.skipLen
+  );
   $('p-skip').classList.toggle('hidden', !showSkip);
 
   // сохранение позиции
@@ -1387,8 +1424,24 @@ async function openPlayer(it){
   $('p-genres').innerHTML = '';
   $('p-meta').innerHTML = '';
   $('p-iframe').src = 'about:blank';
+  $('p-iframe').classList.remove('hidden');
+  destroyAni();
+  const pv = $('p-video');
+  if (pv) pv.classList.add('hidden');
+  ani.key = it.key;
+  ani.release = null;
+  ani.episodes = [];
+  ani.loading = false;
+  ani.fallbackActive = false;
+  sourceTouched = false;
+  if ($('p-src')) $('p-src').classList.add('hidden');
+  if ($('p-eps-sec')) $('p-eps-sec').classList.add('hidden');
+  if ($('p-eps')) $('p-eps').innerHTML = '';
+  bindAniVideo();
+
   $('p-error').classList.add('hidden');
   $('p-open').href = '#';
+  $('p-open').classList.remove('hidden');
   setDesc(it.desc || 'Загрузка описания…');
   updateFavIcon(it);
   updateStatusBtn(it);
@@ -1402,11 +1455,20 @@ async function openPlayer(it){
   $('p-dub').classList.remove('hidden');
   setTimeout(() => $('p-dub').classList.add('hidden'), 6000);
 
-  playItem(it);
+  if (preferAni(it)){
+    renderGenres(it.genres);
+    renderMeta(it);
+    $('p-open').classList.add('hidden');
+    $('p-loader').classList.remove('hidden');
+    setTimeout(() => aniFallback(it), 1800);
+  }else{
+    playItem(it);
+  }
   addHistory(it);
   addToWatching(it);
   trackOpen(it);
   loadRelated(it);
+  loadInfo(it);
 
   if (!it.voices || !it.voices.length){
     $('p-loader').classList.remove('hidden');
@@ -1418,7 +1480,7 @@ async function openPlayer(it){
       if ((!it.genres || !it.genres.length) && found.genres.length) it.genres = found.genres;
       setDesc(it.desc || 'Описание отсутствует');
       renderGenres(it.genres);
-      playItem(it);
+      if (watching.src !== 'ani') playItem(it);
     }else{
       $('p-loader').classList.add('hidden');
       $('p-error').classList.remove('hidden');
@@ -1462,7 +1524,7 @@ function playItem(it){
   renderMeta(it);
   if (!it.voices || !it.voices.length){
     $('p-loader').classList.add('hidden');
-    $('p-error').classList.remove('hidden');
+    showPlayError('Источник Kodik недоступен', 'Проверяем AniLiberty или попробуйте позже');
     $('p-open').href = '#';
     return;
   }
@@ -1481,8 +1543,350 @@ function withEpisode(url, ep){
   }
 }
 
+/* ============================================================
+   ВТОРОЙ ИСТОЧНИК: ANILIBERTY
+   ============================================================ */
+
+function aniSearchApi(query, sid, year){
+  const key = query + '|' + (sid || '') + '|' + (year || '');
+  if (!ani.searchCache.has(key)){
+    const p = new URLSearchParams({ q: query });
+    if (sid) p.set('sid', String(sid));
+    if (year) p.set('year', String(year));
+    ani.searchCache.set(key, backend('/api/ani/search?' + p.toString())
+      .then(r => r && r.ok && r.data && (r.data.id || r.data.alias) ? r.data : null)
+      .catch(() => null));
+  }
+  return ani.searchCache.get(key);
+}
+
+function aniReleaseApi(id){
+  const key = String(id || '');
+  if (!key) return Promise.resolve(null);
+  if (!ani.releaseCache.has(key)){
+    ani.releaseCache.set(key, backend('/api/ani/release?id=' + encodeURIComponent(key))
+      .then(r => r && r.ok && r.data ? r.data : null)
+      .catch(() => null));
+  }
+  return ani.releaseCache.get(key);
+}
+
+/* Пользователь уже выбрал AniLiberty — не запускаем Kodik первым. */
+function preferAni(it){
+  return !!(API_BASE && it && LS.get('src', 'kodik') === 'ani');
+}
+
+/* Страховка: если AniLiberty ничего не нашёл или молчит, включаем Kodik. */
+function aniFallback(it){
+  if (current !== it || watching.src === 'ani') return;
+  if (ani.fallbackActive) return;
+  if (watching.started || watching.playing) return;
+  ani.fallbackActive = true;
+  playItem(it);
+}
+
+/* Релиз ищется строго: сначала shikimori_id, потом точное название и год.
+   Если AniLiberty не знает тайтл — селектор источника просто не появляется. */
+async function loadAni(it){
+  if (!it || !API_BASE) return;
+  if (ani.key !== it.key){
+    ani.key = it.key;
+    ani.release = null;
+    ani.episodes = [];
+  }
+  ani.loading = true;
+  renderSourceUI();
+
+  const titles = uniq([it.title, it.orig].filter(Boolean));
+  let rel = null;
+  for (const title of titles){
+    rel = await aniSearchApi(title, it.sid, it.year);
+    if (rel) break;
+  }
+  if (current !== it || ani.key !== it.key){ ani.loading = false; return; }
+  if (!rel){
+    ani.loading = false;
+    renderSourceUI();
+    aniFallback(it);
+    return;
+  }
+
+  const full = await aniReleaseApi(rel.id || rel.alias);
+  if (current !== it || ani.key !== it.key){ ani.loading = false; return; }
+
+  const episodes = ((full && full.episodes) || []).filter(e => e && e.hls);
+  ani.loading = false;
+  if (!episodes.length){
+    ani.release = full || rel;
+    ani.episodes = [];
+    renderSourceUI();
+    aniFallback(it);
+    return;
+  }
+  ani.release = full || rel;
+  ani.episodes = episodes;
+  renderSourceUI();
+
+  // сохранённый выбор источника: включаем AniLiberty, если пользователь не трогал переключатель
+  if (!ani.fallbackActive && LS.get('src', 'kodik') === 'ani' && !sourceTouched){
+    const p = progress[it.key];
+    const target = (settings.resume && p && p.t > 25) ? p.t : 0;
+    setSource('ani', true, target);
+  }
+}
+
+function aniEpisodeByOrdinal(n){
+  const v = Number(n);
+  if (!isFinite(v)) return null;
+  return ani.episodes.find(e => Math.abs(Number(e.ordinal) - v) < 0.001) || null;
+}
+
+function renderSourceUI(){
+  const box = $('p-src');
+  if (!box) return;
+  const ready = !!(current && ani.key === current.key && ani.episodes.length);
+  box.classList.toggle('hidden', !ready);
+  const ab = box.querySelector('[data-src="ani"]');
+  if (ab){
+    ab.disabled = !ready;
+    ab.title = ready ? '' : 'Для этого релиза нет серий';
+  }
+  box.querySelectorAll('button[data-src]').forEach(b => {
+    b.classList.toggle('on', b.dataset.src === (watching.src || 'kodik'));
+  });
+}
+
+function renderEpisodeList(active){
+  const sec = $('p-eps-sec'), box = $('p-eps');
+  if (!sec || !box) return;
+  if (watching.src !== 'ani' || !ani.episodes.length){
+    box.innerHTML = '';
+    sec.classList.add('hidden');
+    return;
+  }
+  box.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  ani.episodes.forEach(e => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = String(e.ordinal);
+    b.title = e.name || ('Серия ' + e.ordinal);
+    b.className = Number(e.ordinal) === Number(active) ? 'on' : '';
+    b.addEventListener('click', () => switchEpisode(e.ordinal, 0));
+    frag.appendChild(b);
+  });
+  box.appendChild(frag);
+  const note = $('p-eps-note');
+  if (note) note.textContent = ani.episodes.length + ' ' +
+    plural(ani.episodes.length, ['серия', 'серии', 'серий']);
+  sec.classList.remove('hidden');
+}
+
+function loadHls(){
+  if (window.Hls) return Promise.resolve(window.Hls);
+  if (ani.hlsScript) return ani.hlsScript;
+  ani.hlsScript = new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js';
+    s.async = true;
+    s.onload = () => resolve(window.Hls || null);
+    s.onerror = () => resolve(null);
+    document.head.appendChild(s);
+  }).then(Hls => {
+    if (!Hls) ani.hlsScript = null;
+    return Hls;
+  });
+  return ani.hlsScript;
+}
+
+function destroyAni(){
+  if (ani.hls){
+    try{ ani.hls.destroy(); }catch(e){}
+    ani.hls = null;
+  }
+  const v = $('p-video');
+  if (v){
+    try{ v.pause(); }catch(e){}
+    v.removeAttribute('src');
+    try{ v.load(); }catch(e){}
+  }
+  ani.retries = 0;
+}
+
+function showAniError(title, sub){
+  $('p-loader').classList.add('hidden');
+  if ($('p-err-title')) $('p-err-title').textContent = title || 'Плеер не загрузился';
+  if ($('p-err-sub')) $('p-err-sub').textContent = sub || 'Переключитесь на Kodik или попробуйте позже';
+  $('p-error').classList.remove('hidden');
+}
+
+/* Переключение источника без перезагрузки страницы. */
+function setSource(src, auto, startAt){
+  if (!current) return;
+  if (src !== 'ani') src = 'kodik';
+  if (!auto) sourceTouched = true;
+  if (src === 'ani' && !ani.episodes.length){
+    if (!auto) toast('Для этого релиза нет серий AniLiberty');
+    return;
+  }
+  if (watching.src === src){ renderSourceUI(); return; }
+  if (!auto) LS.set('src', src);
+
+  const target = startAt != null && startAt > 0 ? startAt : (watching.cur > 3 ? watching.cur : 0);
+  if (src === 'ani'){
+    ani.lastVoice = watching.voice || (current.voices && current.voices[0]) || null;
+    watching.src = 'ani';
+    $('p-iframe').classList.add('hidden');
+    $('p-video').classList.remove('hidden');
+    $('p-dub').classList.add('hidden');
+    $('p-open').classList.add('hidden');
+    const ep = aniEpisodeByOrdinal(watching.ep) || ani.episodes[0];
+    playAni(ep.ordinal, target, false);
+  }else{
+    destroyAni();
+    watching.src = 'kodik';
+    watching.aniEp = null;
+    $('p-video').classList.add('hidden');
+    $('p-iframe').classList.remove('hidden');
+    $('p-eps-sec').classList.add('hidden');
+    $('p-error').classList.add('hidden');
+    $('p-open').classList.remove('hidden');
+    $('p-dub').classList.remove('hidden');
+    setTimeout(() => $('p-dub').classList.add('hidden'), 5000);
+    renderSourceUI();
+    const voice = ani.lastVoice || (current.voices && current.voices[0]);
+    if (!voice){ showPlayError('Источник Kodik недоступен', 'Для этого релиза нет озвучек'); return; }
+    play(voice, watching.ep);
+  }
+}
+
+/* Запуск серии AniLiberty в нативном <video>. hls.js подключается лениво. */
+function playAni(epOrdinal, target, noSkip){
+  if (!current || !ani.episodes.length) return;
+  const ep = aniEpisodeByOrdinal(epOrdinal) || ani.episodes[0];
+  if (!ep || !ep.hls){ showAniError('Серия недоступна', 'Выберите другую серию или Kodik'); return; }
+
+  destroyAni();
+  watching.src = 'ani';
+  watching.aniEp = ep;
+  watching.ep = ep.ordinal;
+  watching.voice = null;
+  watching.cur = 0;
+  watching.lastT = null;
+  watching.lastTs = 0;
+  watching.dur = Number(ep.duration) || 0;
+  watching.playing = false;
+  watching.started = false;
+  watching.resumeTarget = Math.max(0, Number(target) || 0);
+  watching.resumeTriedAt = 0;
+  watching.resumeAttempts = 0;
+  watching.resumeDone = !(watching.resumeTarget > 2);
+  party.epGuardUntil = Date.now() + 6000;
+  party.lastEpTarget = Number(ep.ordinal) || 0;
+  party.lastEpAt = Date.now();
+  skipDone = !!noSkip || watching.resumeTarget > 2;
+  skipArmed = !skipDone && !!settings.skip;
+  $('p-skip').classList.add('hidden');
+  $('p-iframe').classList.add('hidden');
+
+  const v = $('p-video');
+  v.classList.remove('hidden');
+  $('p-error').classList.add('hidden');
+  $('p-loader').classList.remove('hidden');
+  $('p-open').classList.add('hidden');
+  renderEpisodeList(ep.ordinal);
+  renderSourceUI();
+
+  const onMeta = () => {
+    if (watching.src !== 'ani' || watching.aniEp !== ep) return;
+    if (watching.resumeTarget > 2){
+      const max = Math.max(0, (v.duration || watching.dur || watching.resumeTarget) - 0.5);
+      try{ v.currentTime = Math.min(watching.resumeTarget, max); }catch(e){}
+      toast('Продолжаем с ' + fmtTime(watching.resumeTarget));
+    }
+    watching.resumeDone = true;
+    $('p-loader').classList.add('hidden');
+  };
+  v.addEventListener('loadedmetadata', onMeta, { once: true });
+  const start = () => v.play().catch(() => {});
+  const nativeHls = !!v.canPlayType('application/vnd.apple.mpegurl');
+  const direct = nativeHls || /\.(mp4|webm)(\?|#|$)/i.test(ep.hls);
+
+  if (direct){
+    v.src = ep.hls;
+    start();
+    return;
+  }
+
+  loadHls().then(Hls => {
+    if (!Hls || !Hls.isSupported()){
+      showAniError('Не удалось загрузить HLS-плеер', 'Попробуйте Kodik или Safari');
+      return;
+    }
+    if (watching.src !== 'ani' || watching.aniEp !== ep) return;
+    ani.hls = new Hls({ enableWorker: true });
+    ani.hls.loadSource(ep.hls);
+    ani.hls.attachMedia(v);
+    ani.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      $('p-loader').classList.add('hidden');
+      start();
+    });
+    ani.hls.on(Hls.Events.ERROR, (_, data) => {
+      if (!data || !data.fatal) return;
+      if (data.type === Hls.ErrorTypes.NETWORK_ERROR && ani.retries < 2){
+        ani.retries++;
+        ani.hls.startLoad();
+        return;
+      }
+      showAniError('Серия не загрузилась', 'Переключитесь на Kodik или попробуйте позже');
+    });
+  });
+}
+
+/* События нативного видео → те же хуки прогресса, что и у Kodik. */
+
+function bindAniVideo(){
+  const v = $('p-video');
+  if (!v || v.dataset.bound) return;
+  v.dataset.bound = '1';
+
+  v.addEventListener('play', () => {
+    if (watching.src !== 'ani') return;
+    watching.playing = true;
+    onVideoStarted();
+  });
+  v.addEventListener('pause', () => {
+    if (watching.src === 'ani') watching.playing = false;
+  });
+  v.addEventListener('timeupdate', () => {
+    if (watching.src !== 'ani') return;
+    if (v.duration && Math.abs((watching.dur || 0) - v.duration) > 1) watching.dur = v.duration;
+    onPlayerTime(v.currentTime || 0);
+  });
+  v.addEventListener('loadedmetadata', () => {
+    if (watching.src !== 'ani') return;
+    watching.dur = v.duration || watching.dur;
+    $('p-loader').classList.add('hidden');
+    $('p-error').classList.add('hidden');
+  });
+  v.addEventListener('ended', () => {
+    if (watching.src === 'ani') onVideoEnded();
+  });
+  v.addEventListener('error', () => {
+    if (watching.src !== 'ani' || !v.getAttribute('src')) return;
+    showAniError('Серия не загрузилась', 'Переключитесь на Kodik или попробуйте позже');
+  });
+}
+
 function switchEpisode(ep, target, translationTitle){
   if (!current) return;
+  if (watching.src === 'ani'){
+    const e = aniEpisodeByOrdinal(ep);
+    if (!e) return;
+    playAni(e.ordinal, Math.max(0, Number(target) || 0), true);
+    if (party.on && party.host) onEpisode({ episode: e.ordinal, translation: 'AniLiberty' });
+    return;
+  }
   const voices = current.voices || [];
   if (!voices.length) return;
   let voice = voices[0];
@@ -1512,6 +1916,15 @@ function switchEpisode(ep, target, translationTitle){
 }
 
 function play(voice, episode){
+  watching.src = 'kodik';
+  watching.aniEp = null;
+  const pv = $('p-video');
+  if (pv) pv.classList.add('hidden');
+  const pf = $('p-iframe');
+  if (pf) pf.classList.remove('hidden');
+  if ($('p-eps-sec')) $('p-eps-sec').classList.add('hidden');
+  $('p-open').classList.remove('hidden');
+  renderSourceUI();
   watching.voice = voice || null;
   if (voice && voice.translation) watching.tr = voice.translation;
   const url = withEpisode(absUrl(voice.link), episode);
@@ -1580,8 +1993,10 @@ function updateStatusBtn(it){
   btn.classList.toggle('on', !!cur);
 }
 
-function showPlayError(){
+function showPlayError(title, sub){
   $('p-loader').classList.add('hidden');
+  if ($('p-err-title')) $('p-err-title').textContent = title || 'Источник видео не подключён';
+  if ($('p-err-sub')) $('p-err-sub').textContent = sub || 'Попробуйте другой источник или откройте в новой вкладке';
   $('p-error').classList.remove('hidden');
 }
 
@@ -1591,9 +2006,23 @@ function closePlayer(){
     LS.set('pos', progress);
   }
   saveStats();
+  destroyAni();
   $('player').classList.remove('open');
   $('p-iframe').onload = null;
   $('p-iframe').src = 'about:blank';
+  const pv = $('p-video');
+  if (pv){
+    pv.classList.add('hidden');
+    pv.removeAttribute('src');
+  }
+  if ($('p-src')) $('p-src').classList.add('hidden');
+  if ($('p-eps-sec')) $('p-eps-sec').classList.add('hidden');
+  if ($('p-eps')) $('p-eps').innerHTML = '';
+  ani.key = '';
+  ani.release = null;
+  ani.episodes = [];
+  ani.loading = false;
+  ani.fallbackActive = false;
   document.body.style.overflow = '';
   clearTimeout(loadTimer);
   hideRelated();
@@ -2293,6 +2722,7 @@ function partyOpenPayload(){
     k: 'open',
     item: slim(current),
     voiceLink: v ? v.link : '',
+    src: watching.src || 'kodik',
     ep: watching.ep || null,
     t: Math.round(watching.cur || 0),
     translation: watching.tr || ''
@@ -2480,6 +2910,13 @@ function partyHandle(env){
       party.titleKey = it.key;
       partyChatLine('', 'Хост включил: ' + it.title + (ep ? ' · серия ' + ep : ''), true);
       openPlayer(it);
+      if (m.src === 'ani'){
+        loadAni(it).then(() => {
+          if (current !== it || !ani.episodes.length) return;
+          sourceTouched = true;
+          setSource('ani', true, Math.max(0, Number(m.t) || 0));
+        }).catch(() => {});
+      }
       break;
     }
 
@@ -2542,210 +2979,335 @@ function updatePeople(){
 }
 
 /* ============================================================
-   СВЯЗАННЫЕ ТАЙТЛЫ (Kodik + AniList)
+   СВЯЗАННЫЕ ТАЙТЛЫ
    ============================================================ */
-const REL_BADGE = {
-  SEQUEL:'Продолжение', PREQUEL:'Приквел', PARENT:'Основной', ALTERNATIVE:'Альтернатива',
-  SIDE_STORY:'Спин-офф', SPIN_OFF:'Спин-офф', SUMMARY:'Пересказ', CHARACTER:'Тот же мир',
-  ADAPTATION:'Адаптация', SOURCE:'Исходник', OTHER:'Связанное'
-};
-const REL_ORDER = ['SEQUEL','PREQUEL','PARENT','ALTERNATIVE','SIDE_STORY','SPIN_OFF','SUMMARY','CHARACTER','ADAPTATION','SOURCE','OTHER'];
-const KIND_ORDER = ['ТВ-сериал','Сериал','ONA','Спешл','OVA','Фильм'];
-
 const related = { key:'', items: [], req: 0, cache: new Map() };
 
-/* «Наруто [ТВ-2]» → «наруто», «Sousou no Frieren (2026)» → «sousou no frieren» */
-function baseTitle(t){
-  let s = String(t || '').trim();
-  s = s.replace(/\s*[\[(][^\])]*[\])]\s*$/g, ' ');
-  s = s.replace(/\s*:.*$/, ' ');
-  s = s.replace(/\b(сезон|season|часть|part)\s*[-–]?\s*\d+\b/gi, ' ');
-  return s.replace(/\s+/g, ' ').trim();
+/* ============================================================
+   ТОЧНЫЕ СВЯЗИ, ДЕТАЛИ, ПЕРВОИСТОЧНИК
+   ============================================================ */
+
+const SHIKI_WEB = 'https://shikimori.one';
+const shikiCache = new Map();
+const jikanCache = new Map();
+const staffCache = new Map();
+
+/* Запрос к Shikimori: через свой сервер, если он есть, иначе напрямую. */
+function shikiGet(path){
+  if (!shikiCache.has(path)){
+    shikiCache.set(path, (async () => {
+      let data = null;
+      if (API_BASE) data = await backend('/api/shiki' + path).then(r => r && r.ok ? r.data : null).catch(() => null);
+      if (!data) data = await getJSON(SHIKI_WEB + '/api' + path, 9000).catch(() => null);
+      return data;
+    })());
+  }
+  return shikiCache.get(path);
 }
 
-/* База для поиска «своих»: ромадзи надёжнее русского названия */
-function relBase(it){
-  const src = it.orig || it.title || '';
-  let b = baseTitle(src);
-  if (normText(b).length < 3) b = baseTitle(it.title || '') || it.title || '';
-  return b;
+function jikanGet(path){
+  if (!jikanCache.has(path)){
+    jikanCache.set(path, (async () => {
+      let data = null;
+      if (API_BASE) data = await backend('/api/jikan' + path).then(r => r && r.ok ? r.data : null).catch(() => null);
+      if (!data) data = await getJSON('https://api.jikan.moe/v4' + path, 9000).catch(() => null);
+      return data;
+    })());
+  }
+  return jikanCache.get(path);
 }
 
-function foldText(s){
-  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ё/g, 'е');
+const SHIKI_STATUS = { anons: 'Анонс', ongoing: 'Выходит', released: 'Вышел' };
+const SHIKI_AGE = { g: '0+', pg: '6+', pg_13: '12+', r: '16+', r_plus: '18+', rx: '18+' };
+const SHIKI_KIND = {
+  tv: 'ТВ-сериал', movie: 'Фильм', ova: 'OVA', ona: 'ONA',
+  special: 'Спешл', tv_special: 'Спешл', music: 'Клип'
+};
+const JIKAN_DAY = {
+  mondays: 'по понедельникам', tuesdays: 'по вторникам', wednesdays: 'по средам',
+  thursdays: 'по четвергам', fridays: 'по пятницам', saturdays: 'по субботам',
+  sundays: 'по воскресеньям'
+};
+const MANGA_KIND = {
+  manga: 'Манга', manhwa: 'Манхва', manhua: 'Маньхуа',
+  light_novel: 'Ранобэ', novel: 'Роман', one_shot: 'Ваншот', doujin: 'Додзинси'
+};
+
+const REL_LABEL = {
+  prequel: 'Предыстория', sequel: 'Продолжение', parent: 'Основная история',
+  full_story: 'Полная история', side_story: 'Ответвление', spin_off: 'Спин-офф',
+  alternative_setting: 'Альтернативная версия', alternative_version: 'Альтернативная версия',
+  character: 'Кроссовер', summary: 'Краткое содержание', adaptation: 'Адаптация', other: 'Другое'
+};
+const REL_SORT = ['prequel','parent','full_story','sequel','side_story','spin_off',
+  'alternative_setting','alternative_version','character','summary','other'];
+
+function relKey(s){
+  return String(s || '').toLowerCase().replace(/[\s-]+/g, '_');
 }
 
-function tokensOf(s){
-  return new Set(foldText(s).replace(/[^a-zа-я0-9]+/g, ' ').split(' ').filter(w => w.length > 2));
+function shikiImg(img){
+  const p = img && (img.original || img.preview || img.x96);
+  if (!p) return '';
+  return p.startsWith('http') ? p : SHIKI_WEB + p;
 }
 
-const REL_STOP = new Set(['the','and','for','movie','film','gekijouban','gekijoban','gekijo','ban',
-  'ova','special','season','part','chapter','story','tales','spin','off']);
-
-function relTokens(s){
-  const t = tokensOf(s);
-  REL_STOP.forEach(w => t.delete(w));
-  return t;
-}
-
-function diceOf(a, b){
-  if (!a.size || !b.size) return 0;
-  let n = 0;
-  a.forEach(w => { if (b.has(w)) n++; });
-  return (2 * n) / (a.size + b.size);
-}
-
-function kindFamily(kind){
-  if (kind === 'ТВ-сериал' || kind === 'Сериал') return 'tv';
-  if (kind === 'Фильм') return 'movie';
-  if (kind === 'OVA') return 'ova';
-  if (kind === 'ONA') return 'ona';
-  if (kind === 'Спешл') return 'special';
+function yearOf(a){
+  if (!a) return '';
+  if (a.aired_on) return String(a.aired_on).slice(0, 4);
+  if (a.year) return String(a.year);
   return '';
 }
 
-function formatFamily(f){
-  return { TV:'tv', TV_SHORT:'tv', MOVIE:'movie', OVA:'ova', ONA:'ona', SPECIAL:'special', MUSIC:'' }[f] || '';
-}
-
-/* Поиск всех релизов той же франшизы в Kodik */
-async function kodikSiblings(it){
-  const q = it.orig || it.title;
-  if (!q) return [];
-  let data = await api('search', { title: q, limit: 100, types: 'anime,anime-serial', with_material_data: 'true' });
-  let groups = groupResults(data && data.results);
-  if (groups.length < 2 && it.title && it.title !== q){
-    data = await api('search', { title: it.title, limit: 100, types: 'anime,anime-serial', with_material_data: 'true' });
-    groups = groupResults(data && data.results);
-  }
-  const base = relBase(it);
-  const nb = normText(base);
-  const bt = relTokens(base);
-  const own = groups.filter(g => g.key !== it.key && g.voices.length);
-  if (!nb) return own.slice(0, 40);
-
-  const strict = own.filter(g => (normText(g.title) + ' ' + normText(g.orig)).includes(nb));
-  if (strict.length >= 3) return strict.slice(0, 40);
-
-  // продолжения ищутся иначе («Naruto Shippuuden» → ищем по слову «Naruto»)
-  let loose = [];
-  if (bt.size){
-    loose = own.filter(g => {
-      const gt = tokensOf(g.title + ' ' + g.orig);
-      for (const w of bt) if (gt.has(w)) return true;
-      return false;
-    });
-  }
-  const out = loose.length >= strict.length ? loose : strict;
-  return out.slice(0, 40);
-}
-
-const ANILIST_SEARCH = 'query($s:String){Page(perPage:10){media(search:$s,type:ANIME){id seasonYear format title{romaji english native}}}}';
-const ANILIST_REL = 'query($id:Int){Media(id:$id,type:ANIME){id relations{edges{relationType(version:2) node{id type format episodes seasonYear title{romaji english native}}}}}}';
-
-async function gql(query, variables){
-  const ctrl = new AbortController();
-  const tm = setTimeout(() => ctrl.abort(), 8000);
+function fmtNext(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
   try{
-    const r = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables }),
-      signal: ctrl.signal
-    });
-    if (!r.ok) return null;
-    const j = await r.json();
-    return j && j.data ? j.data : null;
+    return d.toLocaleString('ru-RU', { day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' });
   }catch(e){
-    return null;
-  }finally{
-    clearTimeout(tm);
+    return d.toLocaleDateString('ru-RU');
   }
 }
 
-async function aniListRelations(it){
-  const cands = uniq([it.orig, baseTitle(it.orig || ''), it.alt, it.title]
-    .map(s => String(s || '').trim()).filter(s => s.length > 2));
-  const target = tokensOf([it.orig, it.alt, it.title].filter(Boolean).join(' '));
-  const year = Number(it.year) || 0;
+function statusText(a){
+  if (!a) return '';
+  let s = SHIKI_STATUS[a.status] || a.status || '';
+  if (a.status === 'ongoing' && a.episodes && a.episodes_aired != null){
+    s += ' · ' + a.episodes_aired + ' из ' + a.episodes;
+  }
+  return s;
+}
 
-  for (const c of cands.slice(0, 3)){
-    const data = await gql(ANILIST_SEARCH, { s: c });
-    const media = (data && data.Page && data.Page.media) || [];
-    if (!media.length) continue;
+function broadcastText(b){
+  if (!b) return '';
+  const day = JIKAN_DAY[String(b.day || '').toLowerCase()] || '';
+  const time = b.time ? 'в ' + b.time : '';
+  const tz = /tokyo|jst/i.test(String(b.timezone || '') + ' ' + String(b.string || '')) ? 'по Японии' : '';
+  return [day, time, tz].filter(Boolean).join(' ') || '';
+}
 
-    let best = null, bestSc = -9;
-    for (const m of media){
-      const mt = tokensOf([m.title.romaji, m.title.english, m.title.native].filter(Boolean).join(' '));
-      let sc = diceOf(target, mt) * 2;
-      const my = Number(m.seasonYear) || 0;
-      if (year && my){
-        const d = Math.abs(year - my);
-        sc += d === 0 ? 1 : d <= 1 ? 0.3 : -0.4;
+/* Автор, режиссёр и день выхода серии: Jikan по MAL id из Shikimori.
+   Если Jikan молчит — эти строки просто не показываются. */
+function staffInfo(a){
+  if (!a || !a.myanimelist_id) return Promise.resolve(null);
+  const id = String(a.myanimelist_id);
+  if (!staffCache.has(id)){
+    staffCache.set(id, (async () => {
+      const [st, full] = await Promise.all([
+        jikanGet('/anime/' + id + '/staff'),
+        jikanGet('/anime/' + id + '/full')
+      ]);
+      const staff = (st && st.data) || [];
+      const people = p => (p && p.person && p.person.name) || '';
+      const dir = staff.find(x => (x.positions || []).some(p => /^director$/i.test(p)));
+      let author = staff.find(x => (x.positions || []).some(p => /original (creator|story|work)/i.test(p)));
+      let authorName = author ? people(author) : '';
+
+      if (!authorName && full && full.data){
+        const rels = full.data.relations || [];
+        const adapt = rels.find(r => /adaptation/i.test(r.relation || '') &&
+          (r.entry || []).some(e => /manga|novel/i.test(e.type || '')));
+        const entry = adapt && (adapt.entry || []).find(e => /manga|novel/i.test(e.type || ''));
+        if (entry){
+          const manga = await jikanGet('/manga/' + entry.mal_id);
+          const names = ((manga && manga.data && manga.data.authors) || [])
+            .map(x => x.name).filter(Boolean);
+          if (names.length) authorName = names.slice(0, 2).join(', ');
+        }
       }
-      const mf = formatFamily(m.format), kf = kindFamily(it.kind);
-      if (mf && kf) sc += mf === kf ? 0.6 : -0.6;
-      if (sc > bestSc){ bestSc = sc; best = m; }
+      return {
+        director: dir ? people(dir) : '',
+        author: authorName,
+        broadcast: broadcastText(full && full.data && full.data.broadcast)
+      };
+    })());
+  }
+  return staffCache.get(id);
+}
+
+function infoRow(k, v){
+  const kd = document.createElement('div');
+  kd.className = 'info-k';
+  kd.textContent = k;
+  const vd = document.createElement('div');
+  vd.className = 'info-v';
+  vd.textContent = v;
+  return [kd, vd];
+}
+
+function renderInfo(it, data){
+  const grid = $('p-info');
+  if (!grid) return;
+  const a = data && data.anime;
+  const rows = [];
+
+  if (a){
+    rows.push(['Статус', statusText(a)]);
+    rows.push(['Год', yearOf(a) || it.year]);
+    const studio = (a.studios || []).map(s => s.name).filter(Boolean).join(', ');
+    rows.push(['Студия', studio || it.studio]);
+    const age = SHIKI_AGE[a.rating] || (it.minAge ? it.minAge + '+' : '') || it.mpaa;
+    rows.push(['Возраст', age]);
+    rows.push(['Серии', a.episodes
+      ? a.episodes + (a.status === 'ongoing' && a.episodes_aired != null ? ' (вышло ' + a.episodes_aired + ')' : '')
+      : (it.episodes ? it.episodes + ' эп.' : '')]);
+    if (a.next_episode_at) rows.push(['Следующая серия', fmtNext(a.next_episode_at)]);
+    if (data.broadcast) rows.push(['Расписание', data.broadcast]);
+    if (data.director) rows.push(['Режиссёр', data.director]);
+    if (data.author) rows.push(['Автор', data.author]);
+  }else{
+    if (it.year) rows.push(['Год', it.year]);
+    if (it.studio) rows.push(['Студия', it.studio]);
+    if (it.minAge) rows.push(['Возраст', it.minAge + '+']);
+    if (it.episodes) rows.push(['Серии', it.episodes + ' эп.']);
+  }
+
+  grid.innerHTML = '';
+  rows.filter(r => r[1]).forEach(([k, v]) => {
+    const [kd, vd] = infoRow(k, v);
+    grid.appendChild(kd);
+    grid.appendChild(vd);
+  });
+  grid.classList.toggle('hidden', !grid.children.length);
+}
+
+async function loadInfo(it){
+  const grid = $('p-info');
+  if (grid){ grid.innerHTML = ''; grid.classList.add('hidden'); }
+  if ($('p-origin-sec')) $('p-origin-sec').classList.add('hidden');
+  if (!it) return;
+
+  // данные Kodik показываем сразу, не дожидаясь внешних API
+  renderInfo(it, null);
+  loadAni(it);
+  if (!it.sid) return;
+
+  const a = await shikiGet('/animes/' + it.sid);
+  if (current !== it) return;
+  renderInfo(it, { anime: a });
+
+  staffInfo(a).then(st => {
+    if (current !== it || !st) return;
+    renderInfo(it, { anime: a, director: st.director, author: st.author, broadcast: st.broadcast });
+  }).catch(() => {});
+
+  const rel = await shikiGet('/animes/' + it.sid + '/related');
+  if (current !== it) return;
+  renderOrigin(rel);
+}
+
+function renderOrigin(list){
+  const sec = $('p-origin-sec'), box = $('p-origin');
+  if (!sec || !box) return;
+  box.innerHTML = '';
+
+  // только явная адаптация: спин-офф мангу за первоисточник не выдаём
+  const items = (list || []).filter(x => x && x.manga &&
+    /adapt|адапт/i.test((x.relation || '') + ' ' + (x.relation_russian || '')));
+  if (!items.length){ sec.classList.add('hidden'); return; }
+
+  items.slice(0, 3).forEach(x => {
+    const m = x.manga;
+    const card = document.createElement('div');
+    card.className = 'origin-card';
+
+    const top = document.createElement('div');
+    top.className = 'origin-top';
+    const kind = document.createElement('span');
+    kind.className = 'origin-kind';
+    kind.textContent = MANGA_KIND[m.kind] || 'Манга';
+    const main = document.createElement('div');
+    main.className = 'origin-main';
+    const b = document.createElement('b');
+    b.textContent = m.russian || m.name || 'Первоисточник';
+    const sub = document.createElement('div');
+    sub.className = 'setting-sub';
+    sub.textContent = [
+      m.volumes ? m.volumes + ' т.' : '',
+      m.chapters ? m.chapters + ' гл.' : '',
+      m.status === 'released' ? 'завершён' : (m.status === 'ongoing' ? 'выходит' : '')
+    ].filter(Boolean).join(' · ') || 'первоисточник';
+    main.appendChild(b);
+    main.appendChild(sub);
+    top.appendChild(kind);
+    top.appendChild(main);
+    card.appendChild(top);
+
+    const links = document.createElement('div');
+    links.className = 'origin-links';
+    if (m.id){
+      const s = document.createElement('a');
+      s.href = SHIKI_WEB + '/mangas/' + m.id;
+      s.target = '_blank';
+      s.rel = 'noopener';
+      s.textContent = 'Shikimori ↗';
+      links.appendChild(s);
     }
-    if (!best) continue;
+    const ml = document.createElement('a');
+    ml.href = 'https://mangalib.me/search?q=' + encodeURIComponent(m.russian || m.name || '');
+    ml.target = '_blank';
+    ml.rel = 'noopener';
+    ml.textContent = 'MangaLib ↗';
+    links.appendChild(ml);
+    card.appendChild(links);
 
-    const rel = await gql(ANILIST_REL, { id: best.id });
-    const edges = rel && rel.Media && rel.Media.relations && rel.Media.relations.edges;
-    if (edges && edges.length) return edges;
-  }
-  return [];
+    box.appendChild(card);
+  });
+  sec.classList.remove('hidden');
 }
 
-/* Сопоставляем рёбра AniList с релизами Kodik, чтобы подписать «Продолжение», «Спин-офф» и т.д. */
-function mergeRelated(sibs, edges){
-  const pairs = [];
-  (edges || []).forEach((e, ei) => {
-    const n = e && e.node;
-    if (!n || n.type !== 'ANIME' || n.format === 'MUSIC') return;
-    const et = tokensOf([n.title.romaji, n.title.english, n.title.native].filter(Boolean).join(' '));
-    if (!et.size) return;
-    const fam = formatFamily(n.format);
-    const yr = Number(n.seasonYear) || 0;
-    sibs.forEach((g, i) => {
-      let sc = Math.max(diceOf(et, tokensOf(g.orig)), diceOf(et, tokensOf(g.title)));
-      if (sc < 0.3) return;
-      const gy = Number(g.year) || 0;
-      if (yr && gy){
-        const d = Math.abs(yr - gy);
-        sc += d === 0 ? 0.35 : d <= 1 ? 0.12 : d <= 2 ? 0 : -0.25;
-      }
-      const gf = kindFamily(g.kind);
-      if (fam && gf) sc += fam === gf ? 0.15 : -0.5;
-      if (sc >= 0.55) pairs.push({ i, ei, rel: e.relationType || 'OTHER', sc });
+/* Точные связи Shikimori: без поиска «похожих» названий. */
+function buildRelated(list){
+  return (list || [])
+    .filter(x => x && x.anime)
+    .map(x => {
+      const a = x.anime;
+      const key = relKey(x.relation);
+      return {
+        sid: a.id,
+        title: a.russian || a.name || 'Без названия',
+        poster: shikiImg(a.image),
+        year: yearOf(a),
+        kind: SHIKI_KIND[a.kind] || '',
+        rel: key,
+        label: x.relation_russian || REL_LABEL[key] || 'Связанное',
+        item: null
+      };
+    })
+    .sort((a, b) => {
+      const ai = REL_SORT.indexOf(a.rel), bi = REL_SORT.indexOf(b.rel);
+      return (ai < 0 ? 40 : ai) - (bi < 0 ? 40 : bi) ||
+        (Number(a.year) || 9999) - (Number(b.year) || 9999);
+    })
+    .slice(0, 20);
+}
+
+/* Переход в связанный релиз строго по shikimori_id: если Kodik такого id не знает,
+   ничего не подставляем «похожее». */
+async function openExactRelated(rel){
+  if (!rel) return;
+  if (rel.item){ openPlayer(Object.assign({}, rel.item)); return; }
+  if (!rel.sid) return;
+  toast('Ищу «' + rel.title + '» в каталоге…', 1400);
+
+  const bySid = async () => {
+    const data = await api('search', {
+      shikimori_id: String(rel.sid), with_material_data: 'true', limit: 20
     });
-  });
-  pairs.sort((a, b) => b.sc - a.sc);
-  const relOf = new Map(), usedEdge = new Set();
-  for (const p of pairs){
-    if (relOf.has(p.i) || usedEdge.has(p.ei)) continue;
-    relOf.set(p.i, p.rel);
-    usedEdge.add(p.ei);
+    return groupResults(data && data.results).find(x => String(x.sid) === String(rel.sid));
+  };
+
+  let g = await bySid();
+  if (!g){
+    const data = await api('search', { title: rel.title, limit: 50, with_material_data: 'true' });
+    g = groupResults(data && data.results).find(x => String(x.sid) === String(rel.sid));
   }
-
-  const items = sibs.map((g, i) => {
-    const rel = relOf.get(i) || '';
-    return {
-      key: g.key, title: g.title, poster: g.poster, posterAlt: g.posterAlt,
-      year: g.year, episodes: g.episodes, kind: g.kind, rating: g.rating,
-      rel,
-      label: rel ? (REL_BADGE[rel] || 'Связанное')
-                 : [g.kind, g.year ? String(g.year) : ''].filter(Boolean).join(' · '),
-      item: g
-    };
-  });
-
-  const relRank = x => { const i = REL_ORDER.indexOf(x.rel); return x.rel ? i : 50; };
-  const kindRank = x => { const i = KIND_ORDER.indexOf(x.kind); return i < 0 ? 9 : i; };
-  items.sort((a, b) =>
-    relRank(a) - relRank(b) ||
-    kindRank(a) - kindRank(b) ||
-    (Number(a.year) || 9999) - (Number(b.year) || 9999));
-  return items.slice(0, 20);
+  if (!g || !g.voices || !g.voices.length){
+    toast('Этого релиза нет в каталоге Kodik');
+    return;
+  }
+  openPlayer(g);
 }
 
 function relCard(it){
@@ -2783,7 +3345,7 @@ function relCard(it){
   t.textContent = it.title;
   b.appendChild(t);
 
-  b.addEventListener('click', () => openRelated(it));
+  b.addEventListener('click', () => openExactRelated(it));
   return b;
 }
 
@@ -2795,8 +3357,6 @@ function renderRelated(){
   const frag = document.createDocumentFragment();
   related.items.forEach(it => frag.appendChild(relCard(it)));
   row.appendChild(frag);
-  const note = $('p-related-note');
-  if (note) note.textContent = 'сезоны · фильмы · спешлы';
   sec.classList.remove('hidden');
 }
 
@@ -2810,8 +3370,6 @@ function renderRelSkeleton(){
     d.innerHTML = '<div class="skel"></div><div class="skel skel-line"></div>';
     row.appendChild(d);
   }
-  const note = $('p-related-note');
-  if (note) note.textContent = '';
   sec.classList.remove('hidden');
 }
 
@@ -2824,39 +3382,29 @@ function hideRelated(){
   if (row) row.innerHTML = '';
 }
 
-function openRelated(it){
-  if (!it || !it.item) return;
-  openPlayer(Object.assign({}, it.item));
-}
-
+/* Только официальные связи Shikimori: без поиска «похожих» названий.
+   Без shikimori_id блок не показываем вовсе. */
 async function loadRelated(it){
-  if (!it || !it.key || !$('p-related')) return;
+  if (!it || !it.sid || !$('p-related')) return;
+  const key = 'sid:' + it.sid;
   const req = ++related.req;
-  related.key = it.key;
+  related.key = key;
   related.items = [];
 
-  const cached = related.cache.get(it.key);
-  if (cached && cached.length){
+  const cached = related.cache.get(key);
+  if (cached){
     related.items = cached;
     renderRelated();
     return;
   }
 
   renderRelSkeleton();
-  let sibs = [];
-  try{ sibs = await kodikSiblings(it); }catch(e){}
+  const list = await shikiGet('/animes/' + it.sid + '/related');
   if (req !== related.req) return;
 
-  let edges = [];
-  if (sibs.length){
-    try{ edges = await aniListRelations(it); }catch(e){}
-    if (req !== related.req) return;
-  }
-
-  related.items = mergeRelated(sibs, edges);
-  if (related.items.length) related.cache.set(it.key, related.items);
-  if (req !== related.req) return;
+  related.items = buildRelated(list);
   if (related.items.length){
+    related.cache.set(key, related.items);
     // кэш ограничиваем, чтобы не копить память
     if (related.cache.size > 60){
       const first = related.cache.keys().next();
@@ -2991,10 +3539,22 @@ $('p-fav').onclick = () => {
 
 $('p-status').onclick = () => { if (current) cycleList(current); };
 
+if ($('p-src')){
+  $('p-src').addEventListener('click', e => {
+    const b = e.target.closest('button[data-src]');
+    if (!b || b.disabled) return;
+    setSource(b.dataset.src, false);
+  });
+}
+
 $('p-party').onclick = () => openSheet('party-sheet');
 
 $('p-retry').onclick = () => {
   if (!current) return;
+  if (watching.src === 'ani'){
+    playAni(watching.ep, watching.cur > 2 ? watching.cur : 0, true);
+    return;
+  }
   const voice = watching.voice || (current.voices && current.voices[0]);
   if (voice) play(voice, watching.ep);
 };
@@ -3011,7 +3571,9 @@ $('p-full').onclick = () => {
 $('p-skip').onclick = () => {
   skipDone = true;
   skipArmed = false;
-  playerSeek(settings.skipLen + 2);
+  const opening = (watching.src === 'ani' && watching.aniEp && Array.isArray(watching.aniEp.opening))
+    ? watching.aniEp.opening : null;
+  playerSeek(opening ? opening[1] + 1 : settings.skipLen + 2);
   $('p-skip').classList.add('hidden');
   stats.flags.skip = 1;
   saveStats();

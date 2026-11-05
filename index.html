@@ -140,13 +140,14 @@
   <div class="p-body">
     <div class="p-stage">
       <div class="p-wrap" id="p-wrap">
-        <iframe id="p-iframe" allowfullscreen allow="autoplay; fullscreen; encrypted-media" referrerpolicy="origin"></iframe>
+        <iframe id="p-iframe" title="Плеер" allowfullscreen allow="autoplay; fullscreen; encrypted-media" referrerpolicy="origin"></iframe>
+        <video id="p-video" class="p-video hidden" controls playsinline preload="metadata" title="Плеер"></video>
         <div id="p-loader" class="p-overlay"><div><div class="spin" style="margin:0 auto"></div><div class="txt">Загрузка видео…</div></div></div>
         <div id="p-error" class="p-overlay hidden">
           <div>
             <div class="p-err-emoji">🎬</div>
-            <div class="p-err-title">Источник видео не подключён</div>
-            <div class="p-err-sub">Попробуйте открыть в новой вкладке</div>
+            <div id="p-err-title" class="p-err-title">Источник видео не подключён</div>
+            <div id="p-err-sub" class="p-err-sub">Попробуйте открыть в новой вкладке</div>
           </div>
         </div>
         <button id="p-skip" class="skip-btn hidden">⏭ Пропустить опенинг</button>
@@ -155,6 +156,10 @@
     </div>
 
     <div class="p-actions">
+      <div id="p-src" class="src-switch hidden" role="group" aria-label="Источник видео">
+        <button type="button" data-src="kodik" class="on">Kodik</button>
+        <button type="button" data-src="ani" disabled>AniLiberty</button>
+      </div>
       <button id="p-status" class="pill">+ В список</button>
       <a id="p-open" href="#" target="_blank" rel="noopener">Открыть в новой вкладке ↗</a>
       <button id="p-retry">Перезагрузить</button>
@@ -167,7 +172,16 @@
       <button id="p-restart">С начала</button>
     </div>
 
+    <section id="p-eps-sec" class="hidden">
+      <div class="rel-head">
+        <h2>Серии</h2>
+        <span id="p-eps-note" class="sec-note"></span>
+      </div>
+      <div id="p-eps" class="ep-strip"></div>
+    </section>
+
     <div id="p-meta" class="meta"></div>
+    <div id="p-info" class="info-grid hidden"></div>
     <div id="p-genres" class="genres"></div>
     <p id="p-desc" class="desc clamp"></p>
     <button id="p-desc-toggle" class="desc-toggle hidden">Читать полностью</button>
@@ -175,10 +189,20 @@
     <section id="p-related-sec" class="hidden">
       <div class="rel-head">
         <h2>Связанные</h2>
-        <span id="p-related-note" class="sec-note"></span>
+        <span id="p-related-note" class="sec-note">только официальные связи · Shikimori</span>
       </div>
       <div id="p-related" class="relrow"></div>
     </section>
+
+    <section id="p-origin-sec" class="hidden">
+      <div class="rel-head">
+        <h2>Первоисточник</h2>
+        <span class="sec-note">по связям Shikimori</span>
+      </div>
+      <div id="p-origin" class="origin-box"></div>
+    </section>
+
+    
   </div>
 </div>
 

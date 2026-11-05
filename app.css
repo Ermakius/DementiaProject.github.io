@@ -113,13 +113,22 @@ input,select{font:inherit}
 .p-body::-webkit-scrollbar{display:none}
 .p-stage{position:sticky;top:0;z-index:6;background:var(--bg);padding:12px 16px 10px}
 .p-wrap{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
-#p-iframe{width:100%;height:100%;border:0;display:block;filter:contrast(1.05) saturate(1.1)}
-body.no-fx #p-iframe{filter:none}
+#p-iframe,#p-video{width:100%;height:100%;border:0;display:block;filter:contrast(1.05) saturate(1.1)}
+body.no-fx #p-iframe,body.no-fx #p-video{filter:none}
+.p-video{object-fit:contain;background:#000;position:absolute;inset:0}
+.src-switch{display:inline-flex;gap:2px;padding:3px;background:rgba(255,255,255,.06);border-radius:999px;min-height:36px;align-items:center}
+.src-switch button{background:none;color:#c7c7cf;font-size:11px;padding:6px 10px;min-height:28px;border-radius:999px;white-space:nowrap}
+.src-switch button.on{background:rgba(10,132,255,.25);color:#a9d2ff}
+.src-switch button:disabled{opacity:.55}
+.ep-strip{display:flex;gap:7px;overflow-x:auto;padding:0 16px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ep-strip::-webkit-scrollbar{display:none}
+.ep-strip button{flex:0 0 auto;min-width:42px;min-height:36px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#d1d5db;font-size:12px;padding:7px 10px}
+.ep-strip button.on{background:rgba(10,132,255,.22);border-color:rgba(10,132,255,.5);color:#a9d2ff}
 .p-overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.8);text-align:center;padding:16px}
 .p-overlay .txt{font-size:12px;color:#9ca3af;margin-top:8px}
 .p-err-emoji{font-size:30px;margin-bottom:8px}
 .p-err-title{font-size:14px;color:#d1d5db}
-.p-err-sub{font-size:12px;color:#9a9aa3;margin-top:4px}
+.p-err-sub{font-size:12px;color:#c7c7cf;margin-top:4px}
 .skip-btn{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.78);color:#fff;font-size:12px;font-weight:600;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(6px)}
 .skip-btn:active{background:rgba(10,132,255,.85)}
 .dub-hint{position:absolute;left:10px;bottom:10px;font-size:10px;color:#d1d5db;background:rgba(0,0,0,.66);padding:6px 10px;border-radius:999px;pointer-events:none;transition:opacity .4s}
@@ -136,6 +145,19 @@ body.no-fx #p-iframe{filter:none}
 .desc{margin:14px 16px 0;font-size:14px;line-height:1.6;color:#cfcfd6;white-space:pre-line}
 .desc.clamp{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .desc-toggle{font-size:12px;color:var(--blue);margin:6px 16px 0;padding:4px 0}
+
+/* ---------- детали и первоисточник ---------- */
+.info-grid{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;margin:14px 16px 0;font-size:13px}
+.info-k{color:#8a8a93;white-space:nowrap}
+.info-v{color:#e6e6ea;min-width:0;overflow-wrap:anywhere}
+.origin-box{display:flex;flex-direction:column;gap:8px;padding:0 16px}
+.origin-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px}
+.origin-top{display:flex;gap:10px;align-items:flex-start}
+.origin-kind{flex:0 0 auto;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#7ab8ff;background:rgba(10,132,255,.15);border-radius:6px;padding:4px 7px}
+.origin-main{min-width:0}
+.origin-main b{font-size:13px;font-weight:600;display:block;line-height:1.3}
+.origin-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.origin-links a{font-size:12px;color:#7ab8ff;background:rgba(255,255,255,.07);border-radius:999px;padding:7px 12px;min-height:32px;display:inline-flex;align-items:center}
 
 /* ---------- связанные тайтлы ---------- */
 .rel-head{display:flex;align-items:baseline;gap:8px;margin:22px 16px 10px}
@@ -247,6 +269,7 @@ body.no-fx #p-iframe{filter:none}
   .content{padding-left:12px;padding-right:12px}
   .grid{gap:9px}
   .ctitle{font-size:11px}
+  .info-grid{gap:6px 10px;font-size:12px}
 }
 
 @media (prefers-reduced-motion:reduce){
