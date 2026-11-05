@@ -1763,55 +1763,9 @@ async function importListFile(file){
       const e = queue.shift();
       done++;
       if (done % 12 === 0) toast('Синхронизация: ' + resolved + ' из ' + done, 1200);
-
-      const nt = normText(e.title);
-      // MAL/Shikimori хранят английское или ромадзи-название, а Kodik — русское.
-      // Пробуем исходное название, затем синоним из ALIASES.
-      const tries = uniq([e.title, ...(aliasGroup(nt) || [])]).slice(0, 3);
-      const groups = [];
-      for (const t of tries){
-        const res = await api('search', {
-          title: t, limit: 50,
-          types: 'anime,anime-serial', with_material_data: 'true'
-        });
-        groupResults(res && res.results).forEach(g => {
-          if (!groups.some(x => x.key === g.key)) groups.push(g);
-        });
-        if (groups.length >= 6) break;
-      }
-      if (!groups.length) continue;
-
-      const queries = uniq([nt, ...tries.map(normText)]).filter(Boolean);
-      let best = null, bestRank = -1e9;
-      groups.forEach(g => {
-        let s = 0;
-        for (const q of queries){
-          s = Math.max(s,
-            scoreText(q, normText(g.title)),
-            scoreText(q, normText(g.orig)),
-            scoreText(q, normText(g.alt)),
-            scoreText(q, normText(translit(g.title))));
-        }
-        // при близком совпадении предпочитаем основной сериал, а не спин-офф/сезон
-        let lenPen = 999;
-        [g.title, g.orig, g.alt].forEach(x => {
-          const t = normText(x);
-          if (!t) return;
-          for (const q of queries) lenPen = Math.min(lenPen, Math.abs(t.length - q.length));
-        });
-        const epMatch = (e.ep > 0 && g.episodes)
-          ? Math.max(0, 1 - Math.abs(g.episodes - e.ep) / Math.max(g.episodes, e.ep))
-          : 0;
-        // если пользователь досмотрел ровно столько же серий — это сильный признак
-        const epBonus = epMatch * 60;
-        const seq = (epMatch < 1 && /тв-[2-9]|сезон\s*[2-9]|\b[2-9](nd|rd|th)\b|фильм|movie|\bova\b|\bona\b|спешл|special/i.test(g.title + ' ' + (g.orig || ''))) ? 40 : 0;
-        const bonus = (g.rating || 0) * 2 + Math.min(g.episodes || 0, 60) * 0.5
-                    + epBonus - (lenPen === 999 ? 0 : lenPen) * 3 - seq;
-        const rank = s + bonus;
-        if (rank > bestRank){ bestRank = rank; best = { g, s }; }
-      });
-      if (!best || best.s < 320) continue;
-      setList(best.g, e.status);
+      const g = await findCatalog(e.title, e.ep);
+      if (!g) continue;
+      setList(g, e.status);
       resolved++;
     }
   };
@@ -1822,7 +1776,346 @@ async function importListFile(file){
   toast('Готово: ' + resolved + ' из ' + entries.length + ' добавлено', 4000);
 }
 
-function exportData(){
+/* Найти тайтл каталога по названию из внешнего списка (Shikimori/MAL/файл).
+   Возвращает группу Kodik или null. */
+async function findCatalog(title, epWanted){
+  const nt = normText(title);
+  // MAL/Shikimori хранят английское или ромадзи-название, а Kodik — русское.
+  // Пробуем исходное название, затем синоним из ALIASES.
+  const tries = uniq([title, ...(aliasGroup(nt) || [])]).slice(0, 3);
+  const groups = [];
+  for (const t of tries){
+    const res = await api('search', {
+      title: t, limit: 50,
+      types: 'anime,anime-serial', with_material_data: 'true'
+    });
+    groupResults(res && res.results).forEach(g => {
+      if (!groups.some(x => x.key === g.key)) groups.push(g);
+    });
+    if (groups.length >= 6) break;
+  }
+  if (!groups.length) return null;
+
+  const queries = uniq([nt, ...tries.map(normText)]).filter(Boolean);
+  let best = null, bestRank = -1e9;
+  groups.forEach(g => {
+    let s = 0;
+    for (const q of queries){
+      s = Math.max(s,
+        scoreText(q, normText(g.title)),
+        scoreText(q, normText(g.orig)),
+        scoreText(q, normText(g.alt)),
+        scoreText(q, normText(translit(g.title))));
+    }
+    // при близком совпадении предпочитаем основной сериал, а не спин-офф/сезон
+    let lenPen = 999;
+    [g.title, g.orig, g.alt].forEach(x => {
+      const t = normText(x);
+      if (!t) return;
+      for (const q of queries) lenPen = Math.min(lenPen, Math.abs(t.length - q.length));
+    });
+    const epMatch = (epWanted > 0 && g.episodes)
+      ? Math.max(0, 1 - Math.abs(g.episodes - epWanted) / Math.max(g.episodes, epWanted))
+      : 0;
+    // если пользователь досмотрел ровно столько же серий — это сильный признак
+    const epBonus = epMatch * 60;
+    const seq = (epMatch < 1 && /тв-[2-9]|сезон\s*[2-9]|\b[2-9](nd|rd|th)\b|фильм|movie|\bova\b|\bona\b|спешл|special/i.test(g.title + ' ' + (g.orig || ''))) ? 40 : 0;
+    const bonus = (g.rating || 0) * 2 + Math.min(g.episodes || 0, 60) * 0.5
+                + epBonus - (lenPen === 999 ? 0 : lenPen) * 3 - seq;
+    const rank = s + bonus;
+    if (rank > bestRank){ bestRank = rank; best = { g, s }; }
+  });
+  return best && best.s >= 320 ? best.g : null;
+}
+
+/* ============================================================
+   ВХОД ЧЕРЕЗ SHIKIMORI / MYANIMELIST
+   ============================================================ */
+const sync = {
+  sid: LS.get('sync_sid', ''),
+  info: null,
+  providers: [],
+  busy: false
+};
+
+/* Запрос к своему серверу. Возвращает { ok, status, data } или null,
+   если сервера нет — тогда весь блок входа просто не показывается. */
+async function backend(path, opts = {}){
+  if (!API_BASE) return null;
+  try{
+    const res = await fetch(API_BASE + path, { cache: 'no-store', ...opts });
+    const data = await res.json().catch(() => null);
+    return { ok: res.ok, status: res.status, data };
+  }catch(e){
+    return null;
+  }
+}
+
+function providerLabel(key){
+  const p = sync.providers.find(x => x.key === key);
+  if (p) return p.label;
+  return key === 'mal' ? 'MyAnimeList' : 'Shikimori';
+}
+
+/* 1 тайтл · 2 тайтла · 5 тайтлов */
+function plural(n, forms){
+  const v = Math.abs(Number(n) || 0) % 100;
+  const d = v % 10;
+  if (v > 10 && v < 20) return forms[2];
+  if (d === 1) return forms[0];
+  if (d >= 2 && d <= 4) return forms[1];
+  return forms[2];
+}
+
+function renderAuth(){
+  if (!$('auth-box')) return;
+  const signed = !!(sync.info && sync.info.user);
+  $('auth-guest').classList.toggle('hidden', signed);
+  $('auth-user').classList.toggle('hidden', !signed);
+  $('auth-actions').classList.toggle('hidden', !signed);
+
+  if (!API_BASE){
+    $('auth-buttons').innerHTML = '';
+    $('auth-hint').textContent = 'Вход в один клик работает через свой сервер (server/). Пока его нет — используйте импорт файла.';
+    return;
+  }
+
+  const enabled = sync.providers.filter(p => p.enabled);
+  if (!enabled.length){
+    $('auth-buttons').innerHTML = '';
+    $('auth-hint').textContent = 'Сервер не настроен для входа: нужны SHIKI_CLIENT_ID и SHIKI_CLIENT_SECRET.';
+  }else if (!signed){
+    $('auth-buttons').innerHTML = enabled
+      .map(p => '<button class="btn-ghost" data-auth="' + esc(p.key) + '">Войти через ' + esc(p.label) + '</button>')
+      .join('');
+    $('auth-buttons').querySelectorAll('[data-auth]').forEach(b => {
+      b.onclick = () => authLogin(b.dataset.auth);
+    });
+    $('auth-hint').textContent = 'Один клик — и списки со сайта подтянутся сюда. Файл экспорта больше не нужен.';
+  }
+
+  if (signed){
+    const u = sync.info.user;
+    $('auth-name').textContent = u.name || 'Профиль';
+    $('auth-sub').textContent = providerLabel(sync.info.provider) + ' · ' + (sync.info.count || 0) + ' ' + plural(sync.info.count || 0, ['тайтл', 'тайтла', 'тайтлов']);
+    const av = $('auth-avatar');
+    if (u.avatar){
+      av.src = u.avatar;
+      av.classList.remove('hidden');
+    }else{
+      av.removeAttribute('src');
+      av.classList.add('hidden');
+    }
+  }
+}
+
+function authLogin(key){
+  if (!API_BASE) return;
+  const back = location.origin + location.pathname + location.search;
+  location.href = API_BASE + '/api/auth/' + encodeURIComponent(key) + '/start?return=' + encodeURIComponent(back);
+}
+
+function authForget(){
+  sync.sid = '';
+  sync.info = null;
+  LS.del('sync_sid');
+  renderAuth();
+}
+
+async function authRefresh(){
+  if (!sync.sid) return;
+  const me = await backend('/api/auth/me?sid=' + encodeURIComponent(sync.sid));
+  if (me && me.ok){
+    sync.info = me.data;
+    renderAuth();
+  }else if (me && me.status === 401){
+    authForget();
+  }
+}
+
+async function initAuth(){
+  // вернулись из OAuth: sid пришёл во фрагменте, чтобы не попасть в логи
+  const hash = location.hash || '';
+  let fresh = false;
+  if (hash.indexOf('#sync=') === 0){
+    const sid = hash.slice(6).trim();
+    if (sid){
+      sync.sid = sid;
+      LS.set('sync_sid', sid);
+      fresh = true;
+    }
+    history.replaceState(history.state, '', location.pathname + location.search);
+  }
+
+  const pr = await backend('/api/auth/providers');
+  if (pr && pr.ok && pr.data) sync.providers = pr.data.providers || [];
+  renderAuth();
+
+  if (sync.sid){
+    await authRefresh();
+    if (fresh && sync.info){
+      openSheet('settings-sheet');
+      syncLists();
+    }else if (sync.info){
+      // списки обновляем сами, если давно не виделись
+      const meta = LS.get('sync_meta', null);
+      const stale = !meta || Date.now() - (meta.at || 0) > 6 * 3600 * 1000;
+      if (stale) idle(() => syncLists(true));
+    }
+  }
+  renderAuth();
+}
+
+/* Сопоставить запись внешнего списка с тайтлом каталога. */
+async function resolveRate(rate){
+  if (rate.shikimori_id){
+    const res = await api('search', {
+      shikimori_id: String(rate.shikimori_id), with_material_data: 'true', limit: 20
+    });
+    const groups = groupResults(res && res.results);
+    const exact = groups.find(g => String(g.sid) === String(rate.shikimori_id));
+    if (exact) return exact;
+    if (groups.length) return groups[0];
+  }
+  const title = rate.title_en || rate.title;
+  if (!title) return null;
+  return findCatalog(title, rate.watched || rate.episodes_total || 0);
+}
+
+async function applyRates(rates, silent){
+  const queue = rates.slice(0, 400);
+  let done = 0, matched = 0;
+  const worker = async () => {
+    while (queue.length){
+      const r = queue.shift();
+      done++;
+      if (!silent && done % 10 === 0) toast('Синхронизация: ' + matched + ' из ' + done, 900);
+      const g = await resolveRate(r);
+      if (!g) continue;
+      setList(g, r.status || 'planned');
+      // сколько серий уже посмотрено — чтобы «продолжить» открывало нужную
+      if (r.watched > 0){
+        const p = progress[g.key] || {};
+        if (!p.ep || p.ep < r.watched){ p.ep = r.watched; p.ts = Date.now(); progress[g.key] = p; }
+      }
+      matched++;
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  if (matched){
+    LS.set('pos', progress);
+    LS.set('sync_meta', { from: sync.info && sync.info.provider, at: Date.now() });
+    renderHistoryRow();
+  }
+  return matched;
+}
+
+async function syncLists(silent){
+  if (!sync.sid || sync.busy) return;
+  sync.busy = true;
+  const btn = $('btn-auth-sync');
+  if (btn) btn.disabled = true;
+  try{
+    const r = await backend('/api/auth/rates?sid=' + encodeURIComponent(sync.sid));
+    if (!r){
+      toast('Сервер не отвечает');
+      return;
+    }
+    if (r.status === 401){
+      authForget();
+      toast('Сессия истекла — войдите заново', 3200);
+      return;
+    }
+    if (!r.ok || !r.data){
+      toast('Не удалось получить списки');
+      return;
+    }
+    sync.info = r.data.session || sync.info;
+    const rates = r.data.rates || [];
+    const matched = await applyRates(rates, silent);
+    renderAuth();
+    renderProfile();
+    if (!silent) toast('Синхронизировано: ' + matched + ' из ' + rates.length, 3200);
+  }finally{
+    sync.busy = false;
+    if (btn) btn.disabled = false;
+  }
+}
+
+/* ============================================================
+   ПЕРЕНОС ПРОФИЛЯ МЕЖДУ УСТРОЙСТВАМИ
+   ============================================================ */
+async function cloudSave(){
+  if (!API_BASE){ toast('Нужен свой сервер (server/)'); return; }
+  const btn = $('btn-cloud-save');
+  if (btn) btn.disabled = true;
+  try{
+    const r = await backend('/api/profile', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(profileDump())
+    });
+    if (!r || !r.ok || !r.data || !r.data.code){
+      toast((r && r.data && r.data.error) || 'Не удалось сохранить');
+      return;
+    }
+    const code = r.data.code;
+    $('cloud-hint').innerHTML = 'Код профиля: <b class="mono">' + esc(code) +
+      '</b> — введите его на другом устройстве. Код живёт 30 дней.';
+    try{
+      await navigator.clipboard.writeText(code);
+      toast('Код скопирован: ' + code, 4000);
+    }catch(e){
+      toast('Код: ' + code, 6000);
+    }
+  }finally{
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function cloudLoad(){
+  if (!API_BASE){ toast('Нужен свой сервер (server/)'); return; }
+  const code = ($('cloud-code').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length !== 7){ toast('Код — 7 символов'); return; }
+  const btn = $('btn-cloud-load');
+  if (btn) btn.disabled = true;
+  try{
+    const r = await backend('/api/profile/' + code);
+    if (!r){
+      toast('Сервер не отвечает');
+      return;
+    }
+    if (r.status === 404){ toast('Профиль не найден или истёк'); return; }
+    if (!r.ok || !r.data){ toast('Не удалось загрузить'); return; }
+    const keys = Object.keys(r.data).filter(k => k.indexOf('anime_') === 0);
+    if (!keys.length){ toast('В профиле нет данных'); return; }
+    if (!confirm('Заменить текущие списки, историю и настройки профилем с другого устройства?')) return;
+
+    keys.forEach(k => {
+      const v = r.data[k];
+      localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+    });
+    toast('Профиль загружен, перезапускаю…', 1500);
+    setTimeout(() => location.reload(), 900);
+  }finally{
+    if (btn) btn.disabled = false;
+  }
+}
+
+/* Дамп для облака: без кешей каталога — они большие и пересобираются сами. */
+function profileDump(){
+  const dump = {};
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (!k || k.indexOf('anime_') !== 0) continue;
+    if (/^anime_(db|c_)/.test(k)) continue;
+    try{ dump[k] = JSON.parse(localStorage.getItem(k)); }catch(e){ dump[k] = localStorage.getItem(k); }
+  }
+  return dump;
+}
+
+/* Полный дамп — для файла экспорта: там кеш каталога тоже не нужен. */
+function fullDump(){
   const dump = {};
   for (let i = 0; i < localStorage.length; i++){
     const k = localStorage.key(i);
@@ -1830,7 +2123,11 @@ function exportData(){
       try{ dump[k] = JSON.parse(localStorage.getItem(k)); }catch(e){ dump[k] = localStorage.getItem(k); }
     }
   }
-  const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
+  return dump;
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(fullDump(), null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'anime-backup-' + todayKey() + '.json';
@@ -2790,6 +3087,29 @@ $('import-file').onchange = e => {
 $('btn-export').onclick = exportData;
 $('btn-reset').onclick = resetAll;
 
+/* --- списки онлайн --- */
+$('btn-auth-sync').onclick = () => syncLists(false);
+$('btn-auth-out').onclick = async () => {
+  if (sync.sid) await backend('/api/auth/logout?sid=' + encodeURIComponent(sync.sid), { method: 'POST' });
+  authForget();
+  toast('Вы вышли, списки остались');
+};
+
+/* --- перенос профиля --- */
+$('btn-cloud-save').onclick = cloudSave;
+$('btn-cloud-open').onclick = () => {
+  const row = $('cloud-row');
+  row.classList.toggle('hidden');
+  if (!row.classList.contains('hidden')) $('cloud-code').focus();
+};
+$('btn-cloud-load').onclick = cloudLoad;
+$('cloud-code').addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+});
+$('cloud-code').addEventListener('keydown', e => {
+  if (e.key === 'Enter') cloudLoad();
+});
+
 /* --- настройки --- */
 function bindSwitch(id, key, after){
   $(id).onclick = () => {
@@ -2894,6 +3214,7 @@ window.addEventListener('beforeunload', () => {
   setTab('home');
   renderHistoryRow();
   renderProfile();
+  initAuth();
   loadHome(true);
 
   // ?party=CODE

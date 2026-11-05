@@ -273,17 +273,48 @@
     <div class="sheet-sep"></div>
     <div class="sec-head"><h2>Данные</h2></div>
     <div class="row wrap">
-      <button id="btn-import-2" class="btn-ghost">Импорт с Shikimori / MAL</button>
+      <button id="btn-import-2" class="btn-ghost">Импорт из файла</button>
       <button id="btn-export" class="btn-ghost">Экспорт данных</button>
       <button id="btn-reset" class="btn-ghost danger">Сбросить всё</button>
     </div>
     <input id="import-file" type="file" accept=".xml,text/xml,application/xml" class="hidden">
 
     <div class="sheet-sep"></div>
+    <div class="sec-head"><h2>Списки онлайн</h2></div>
+    <div id="auth-box" class="auth-box">
+      <div id="auth-guest">
+        <div class="row wrap" id="auth-buttons"></div>
+        <p class="hint tiny" id="auth-hint">Вход в один клик через свой сервер.</p>
+      </div>
+      <div id="auth-user" class="auth-user hidden">
+        <img id="auth-avatar" class="auth-avatar hidden" alt="" width="38" height="38" loading="lazy">
+        <div class="auth-meta">
+          <b id="auth-name"></b>
+          <div class="setting-sub" id="auth-sub"></div>
+        </div>
+      </div>
+      <div class="row wrap hidden" id="auth-actions">
+        <button id="btn-auth-sync" class="btn-ghost">Обновить списки</button>
+        <button id="btn-auth-out" class="btn-ghost danger">Выйти</button>
+      </div>
+    </div>
+
+    <div class="sheet-sep"></div>
+    <div class="sec-head"><h2>Перенос профиля</h2></div>
+    <div class="row wrap">
+      <button id="btn-cloud-save" class="btn-ghost">Сохранить в облако</button>
+      <button id="btn-cloud-open" class="btn-ghost">Загрузить по коду</button>
+    </div>
+    <div class="row wrap hidden" id="cloud-row">
+      <input id="cloud-code" class="field field-code" maxlength="7" placeholder="КОД" autocapitalize="characters" autocomplete="off">
+      <button id="btn-cloud-load" class="btn-primary">Загрузить</button>
+    </div>
+    <p class="hint tiny" id="cloud-hint">Код действует 30 дней. Списки, история и настройки переедут на другое устройство.</p>
+
+    <div class="sheet-sep"></div>
     <p class="hint tiny">
-      Синхронизация списков работает через файл экспорта: Shikimori → Профиль → Экспорт,
-      MAL → Anime List → Export. Файл разбирается прямо в браузере, никуда не отправляется.
-      Прямой вход по OAuth невозможен: статический сайт не может хранить client_secret.
+      Без сервера синхронизация работает через файл: Shikimori → Профиль → Экспорт,
+      MAL → Anime List → Export. Файл разбирается прямо в браузере.
     </p>
     <p class="hint tiny" id="settings-version"></p>
   </div>

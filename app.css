@@ -215,6 +215,16 @@ body.no-fx #p-iframe{filter:none}
 .switch.on span{transform:translateX(20px)}
 .select{background:rgba(255,255,255,.1);border:0;border-radius:10px;padding:9px 12px;color:#fff;font-size:14px;outline:none}
 
+/* вход через Shikimori/MAL и перенос профиля */
+.auth-box{display:flex;flex-direction:column;gap:10px}
+.auth-user{display:flex;align-items:center;gap:12px}
+.auth-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:0 0 38px;background:rgba(255,255,255,.1)}
+.auth-meta{min-width:0}
+.auth-meta b{font-size:14px;font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1.5px}
+#cloud-row .field{flex:1 1 130px;margin:0;min-width:0}
+#cloud-row .btn-primary{flex:0 0 auto}
+
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:90;background:rgba(44,44,46,.97);padding:9px 16px;border-radius:999px;font-size:14px;max-width:90%;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 
 /* ---------- десктоп ---------- */
